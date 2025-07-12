@@ -1,67 +1,71 @@
+// src/pages/SignUp2.jsx
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import InputField from "../components/InputField";
 import LoginButton from "../components/LoginButton";
-import ShadowBox from "../components/ShadowBox";
-import { signup } from "../api/auth";
 
 export default function SignUp2() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const email = location.state?.email || "";
 
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordCheck, setPasswordCheck] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSignUp = async () => {
-    if (password !== passwordCheck) {
+  const handleSignUp = () => {
+    if (password !== confirmPassword) {
       setError("비밀번호가 일치하지 않습니다.");
       return;
     }
 
-    try {
-      await signup({ name, email, password, passwordCheck });
-      alert("회원가입이 완료되었습니다.");
-      navigate("/signin");
-    } catch (err) {
-      console.error(err);
-      alert("회원가입에 실패했습니다.");
-    }
+    alert("회원가입이 완료되었습니다.");
+    navigate("/signin");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
-      <ShadowBox>
-        <h2 className="text-2xl font-semibold text-center mt-20 mb-20">회원가입</h2>
-        <div className="space-y-5">
-          <InputField type="email" value={email} disabled />
+      <div className="w-full max-w-md border border-gray-200 shadow-lg rounded-xl p-8 space-y-6">
+        <h2 className="text-2xl font-semibold text-center">회원가입 - 정보 입력</h2>
+
+        <div className="space-y-4">
+          <InputField
+            type="email"
+            value={email}
+            disabled
+          />
+
           <InputField
             type="text"
             placeholder="이름"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+
           <InputField
             type="password"
             placeholder="비밀번호"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
           <InputField
             type="password"
             placeholder="비밀번호 재입력"
-            value={passwordCheck}
-            onChange={(e) => setPasswordCheck(e.target.value)}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
           />
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-            <div className="flex justify-center">
-                <LoginButton text="회원가입" onClick={handleSignUp} className="w-full" />
-            </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <LoginButton
+            text="회원가입"
+            onClick={handleSignUp}
+            className="w-full mt-2"
+          />
         </div>
-      </ShadowBox>
+      </div>
     </div>
   );
 }
-

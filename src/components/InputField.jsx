@@ -1,29 +1,29 @@
-// src/components/InputField.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function InputField({
   type = "text",
-  placeholder = "",
+  placeholder,
   value,
   onChange,
   disabled = false,
-  name = "",
+  className = "",
 }) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <input
-      type={type}
-      name={name}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
-      className={`w-full px-4 py-2 border border-gray-300 rounded-md text-sm text-black
-        placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black
-        ${disabled ? "bg-gray-100 text-gray-400" : "bg-white"}`}
-    />
+    <div className="w-full flex justify-center">
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className={`w-[60%] px-3 py-2 border rounded-md text-sm transition-all placeholder-gray-400 mb-4
+          ${disabled ? "bg-gray-100 text-gray-500" : "bg-white"}
+          focus:outline-none focus:ring-2 focus:ring-black`}
+      />
+    </div>
   );
 }
