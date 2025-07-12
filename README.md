@@ -1,70 +1,68 @@
-# Getting Started with Create React App
+# BlockChef - 프론트엔드 페이지 구현
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+이 저장소는 BlockChef 웹 애플리케이션의 프론트엔드 코드로, React와 Tailwind CSS를 기반으로 구현되었습니다.  
+사용자 인증 및 기본 인터페이스 페이지를 구성하였으며, API 연동 기반 기능도 포함되어 있습니다.
 
-## Available Scripts
+## 주요 기술 스택
 
-In the project directory, you can run:
+- **React (Vite)**
+- **Tailwind CSS**
+- **React Router**
+- **Axios**
+- **Netlify (배포 예정)**
 
-### `npm start`
+## 구현된 페이지
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+###  Startpage.jsx
+- BlockChef의 랜딩 페이지.
+- 프로젝트 로고, 소개 섹션, 로그인 버튼 포함.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+###  SignIn.jsx
+- 사용자 로그인 페이지.
+- 이메일 및 비밀번호 입력 필드.
+- 로그인 버튼 (API 연동 완료).
+- ShadowBox 컴포넌트로 UI 통일.
 
-### `npm test`
+###  SignUp1.jsx
+- 회원가입 1단계 – 이메일 인증.
+- 인증번호 요청 및 타이머 표시.
+- 인증번호 확인 후 다음 페이지로 이동.
+- 테스트 모드 및 API 연동 모두 가능.
+- 디자인은 ShadowBox 및 버튼 정렬로 통일.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+###  SignUp2.jsx
+- 회원가입 2단계 – 사용자 정보 입력.
+- 이름, 비밀번호, 비밀번호 확인 입력 필드.
+- 회원가입 버튼 클릭 시 API 호출.
+- 에러 처리 및 입력 유효성 검사 포함.
 
-### `npm run build`
+###  PasswordReset1.jsx
+- 비밀번호 재설정 1단계 – 이메일 인증.
+- SignUp1과 동일한 구조 및 로직 적용.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+###  PasswordReset2.jsx
+- 비밀번호 재설정 2단계 – 새 비밀번호 입력.
+- 비밀번호 및 재입력 확인 필드.
+- API 연동 완료 및 에러 처리 포함.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 공통 컴포넌트
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- `InputField`: 재사용 가능한 입력 필드 컴포넌트.
+- `LoginButton`: 공통 버튼 컴포넌트.
+- `ShadowBox`: 흰색 배경 + 그림자 박스 디자인 컴포넌트.
 
-### `npm run eject`
+## 테스트 모드
+- SignUp1, PasswordReset1 페이지는 테스트용 인증번호(`123456`)로 검증 가능.
+- 실제 API와 연결 시 `isTest = false` 설정으로 전환.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+##  기타 사항
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- 각 페이지는 백엔드에서 제공한 Swagger 명세서 기반으로 API를 연동하였습니다.
+- 이메일, 비밀번호 등에 대한 클라이언트 유효성 검사 및 에러 처리 구현 완료.
+- 실제 배포 시 CORS 처리 및 API 주소 매칭 필요.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
