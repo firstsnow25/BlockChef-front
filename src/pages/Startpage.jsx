@@ -39,7 +39,7 @@ export default function Startpage() {
           <img
             src={block_chef}
             alt="BlockChef Logo"
-            className="w-[400px] h-[356px]"
+            className="w-[356px] h-[356px]"
           />
 
           <h1 className="mt-10 text-[120px] font-semibold text-black text-center leading-none">
