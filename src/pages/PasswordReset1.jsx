@@ -6,7 +6,7 @@ import { sendEmailCode, verifyEmailCode } from "../api/auth";
 
 export default function PasswordReset1() {
   const navigate = useNavigate();
-  const useTestCode = true;
+  const useTestCode = false;
 
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
