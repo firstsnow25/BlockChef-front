@@ -64,7 +64,7 @@ export default function SignIn() {
         <LoginButton
           text="로그인"
           onClick={handleLogin}
-          className="w-[80%] mx-auto mt-4"
+          className="w-[30%] mx-auto mt-4"
         />
 
         <p className="text-sm text-gray-600 text-center mt-4">
