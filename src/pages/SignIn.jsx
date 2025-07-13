@@ -69,7 +69,7 @@ export default function SignIn() {
 
         <p className="text-sm text-gray-600 text-center mt-4">
           <Link to="/password-reset1" className="text-blue-500 hover:underline">
-            Forget ID or password?
+            Forgot ID or password?
           </Link>
         </p>
 
