@@ -6,7 +6,7 @@ import { sendEmailCode, verifyEmailCode } from "../api/auth";
 
 export default function PasswordReset1() {
   const navigate = useNavigate();
-  const useTestCode = false;
+  const useTestCode = true;
 
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -40,8 +40,8 @@ export default function PasswordReset1() {
       try {
         await sendEmailCode({ email });
         alert("인증번호가 이메일로 발송되었습니다.");
-      } catch {
-        setError("인증번호 전송 실패");
+      } catch (err) {
+        setError("인증번호 전송 실패: " + (err.response?.data?.message || "오류 발생"));
       }
     }
 
@@ -72,8 +72,8 @@ export default function PasswordReset1() {
     try {
       await verifyEmailCode({ email, code });
       navigate("/password-reset2", { state: { email } });
-    } catch {
-      setError("인증 실패");
+    } catch (err) {
+      setError("인증 실패: " + (err.response?.data?.message || "오류 발생"));
     }
   };
 
