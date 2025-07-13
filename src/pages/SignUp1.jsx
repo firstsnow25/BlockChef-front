@@ -5,7 +5,7 @@ import LoginButton from "../components/LoginButton";
 import ShadowBox from "../components/ShadowBox";
 import { sendEmailCode, verifyEmailCode } from "../api/auth";
 
-const isTest = true;
+const isTest = false;
 
 export default function SignUp1() {
   const navigate = useNavigate();
