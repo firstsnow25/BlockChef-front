@@ -5,7 +5,7 @@ import LoginButton from "../components/LoginButton";
 import ShadowBox from "../components/ShadowBox";
 import { sendEmailCode, verifyEmailCode } from "../api/auth";
 
-const isTest = false;
+const isTest = true;
 
 export default function SignUp1() {
   const navigate = useNavigate();
@@ -78,7 +78,7 @@ export default function SignUp1() {
         alert("인증이 완료되었습니다.");
         navigate("/signup2", { state: { email } });
       } catch (err) {
-        setError("인증 실패: " + (err.response?.data || "오류 발생"));
+        setError("인증 실패: " + (err.response?.data?.message || "오류 발생"));
       }
     }
 
