@@ -15,21 +15,26 @@ export default function SignUp2() {
   const [passwordCheck, setPasswordCheck] = useState("");
   const [error, setError] = useState("");
 
-  const handleSignUp = async () => {
-    if (password !== passwordCheck) {
-      setError("비밀번호가 일치하지 않습니다.");
-      return;
-    }
+const handleSignUp = async () => {
+  if (password !== passwordCheck) {
+    setError("비밀번호가 일치하지 않습니다.");
+    return;
+  }
 
-    try {
-      await signup({ name, email, password, passwordCheck });
-      alert("회원가입이 완료되었습니다.");
-      navigate("/signin");
-    } catch (err) {
-      console.error(err);
-      alert("회원가입에 실패했습니다.");
-    }
-  };
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    setError("비밀번호는 8자 이상이며, 영문, 숫자, 특수문자를 포함해야 합니다.");
+    return;
+  }
+
+  try {
+    await signup({ name, email, password, passwordCheck });
+    alert("회원가입이 완료되었습니다.");
+    navigate("/signin");
+  } catch (err) {
+    setError(err.response?.data?.message || "회원가입에 실패했습니다.");
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
