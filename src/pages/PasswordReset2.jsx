@@ -63,7 +63,7 @@ export default function PasswordReset2() {
           />
             {error && <p className="text-sm text-red-500 text-center">{error}</p>}
             <div className="flex justify-center">
-                <LoginButton text="재설정" onClick={handleReset} className="w-full" />
+                <LoginButton text="재설정" onClick={handleReset} className="w-[30%] mx-auto mt-4" />
             </div>
         </div>
       </ShadowBox>
