@@ -62,7 +62,7 @@ const handleSignUp = async () => {
           />
             {error && <p className="text-sm text-red-500 text-center">{error}</p>}
             <div className="flex justify-center">
-                <LoginButton text="회원가입" onClick={handleSignUp} className="w-full" />
+                <LoginButton text="회원가입" onClick={handleSignUp} className="w-[30%] mx-auto mt-4" />
             </div>
         </div>
       </ShadowBox>
