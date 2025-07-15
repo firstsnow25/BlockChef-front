@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import InputField from "../components/InputField";
 import LoginButton from "../components/LoginButton";
 import ShadowBox from "../components/ShadowBox";
-import { sendEmailCode, verifyEmailCode } from "../api/auth";
+import { sendSignUpEmailCode, verifyEmailCode } from "../api/auth";
 
 const isTest = false;
 
@@ -16,8 +16,10 @@ export default function SignUp1() {
   const [error, setError] = useState("");
   const [disabled, setDisabled] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [countdownId, setCountdownId] = useState(null);
 
   const correctTestCode = "123456";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const formatTime = (sec) => {
     const m = Math.floor(sec / 60);
@@ -26,63 +28,65 @@ export default function SignUp1() {
   };
 
   const handleSendCode = async () => {
-    if (!email.includes("@")) {
+    if (!emailRegex.test(email)) {
       setError("올바른 이메일 형식을 입력해주세요.");
       return;
     }
 
     setError("");
-    setSent(true);
     setDisabled(true);
-    setTimer(180);
 
-    if (isTest) {
-      alert("테스트용 인증번호가 발송되었습니다. (123456)");
-    } else {
-      try {
-        await sendEmailCode({ email });
+    try {
+      if (isTest) {
+        alert("테스트용 인증번호가 발송되었습니다. (123456)");
+      } else {
+        await sendSignUpEmailCode({ email });
         alert("인증번호가 이메일로 발송되었습니다.");
-      } catch (err) {
-        setError("인증번호 전송 실패: " + (err.response?.data || "오류 발생"));
-        return;
       }
+
+      setSent(true);
+      setTimer(180);
+
+      const countdown = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdown);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      setCountdownId(countdown);
+    } catch (err) {
+      setError("인증번호 전송 실패: " + (err.response?.data?.message || "오류 발생"));
+    } finally {
+      setTimeout(() => setDisabled(false), 1000);
     }
-
-    setTimeout(() => setDisabled(false), 3000);
-
-    const countdown = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdown);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
   };
 
   const handleVerify = async () => {
     setError("");
     setIsVerifying(true);
 
-    if (isTest) {
-      if (code === correctTestCode) {
-        alert("인증이 완료되었습니다. (테스트)");
-        navigate("/signup2", { state: { email } });
+    try {
+      if (isTest) {
+        if (code === correctTestCode) {
+          alert("인증이 완료되었습니다. (테스트)");
+          navigate("/signup2", { state: { email } });
+        } else {
+          setError("인증번호가 일치하지 않습니다. (테스트)");
+        }
       } else {
-        setError("인증번호가 일치하지 않습니다. (테스트)");
-      }
-    } else {
-      try {
         await verifyEmailCode({ email, code });
         alert("인증이 완료되었습니다.");
         navigate("/signup2", { state: { email } });
-      } catch (err) {
-        setError("인증 실패: " + (err.response?.data?.message || "오류 발생"));
       }
+    } catch (err) {
+      setError("인증 실패: " + (err.response?.data?.message || "오류 발생"));
+    } finally {
+      setIsVerifying(false);
     }
-
-    setIsVerifying(false);
   };
 
   return (
@@ -92,15 +96,12 @@ export default function SignUp1() {
 
         <div className="space-y-5 mt-6">
           <div className="w-full space-y-1">
-            {/* 이메일 입력 */}
             <InputField
               type="email"
               placeholder="아이디(이메일)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-
-            {/* 타이머 왼쪽 정렬로 표시 */}
             {sent && timer > 0 && (
               <div className="mt-1 pl-5 ml-12">
                 <p className="text-xs text-red-500 ml-12">남은 시간: {formatTime(timer)}</p>
@@ -108,15 +109,14 @@ export default function SignUp1() {
             )}
           </div>
 
-          {/* 인증번호 입력 */}
           <InputField
             type="text"
             placeholder="인증번호"
             value={code}
             onChange={(e) => setCode(e.target.value)}
+            disabled={!sent}
           />
 
-          {/* 버튼 2개 나란히 정렬 */}
           <div className="flex justify-center gap-4 mt-2">
             <button
               disabled={disabled}
@@ -149,6 +149,9 @@ export default function SignUp1() {
     </div>
   );
 }
+
+
+
 
 
 

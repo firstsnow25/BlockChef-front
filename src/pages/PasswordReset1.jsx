@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import InputField from "../components/InputField";
 import ShadowBox from "../components/ShadowBox";
-import { sendEmailCode, verifyEmailCode } from "../api/auth";
+import { sendResetPasswordEmailCode, verifyEmailCode } from "../api/auth";
 
 export default function PasswordReset1() {
   const navigate = useNavigate();
@@ -14,8 +14,10 @@ export default function PasswordReset1() {
   const [timer, setTimer] = useState(180);
   const [error, setError] = useState("");
   const [disabled, setDisabled] = useState(false);
+  const [countdownId, setCountdownId] = useState(null);
 
   const testCode = "123456";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const formatTime = (sec) => {
     const m = Math.floor(sec / 60);
@@ -24,38 +26,41 @@ export default function PasswordReset1() {
   };
 
   const handleSendCode = async () => {
-    if (!email.includes("@")) {
-      setError("올바른 이메일을 입력해주세요.");
+    if (!emailRegex.test(email)) {
+      setError("올바른 이메일 형식을 입력해주세요.");
       return;
     }
 
     setError("");
-    setSent(true);
     setDisabled(true);
-    setTimer(180);
 
-    if (useTestCode) {
-      alert("테스트용 인증번호가 발송되었습니다. (123456)");
-    } else {
-      try {
-        await sendEmailCode({ email });
+    try {
+      if (useTestCode) {
+        alert("테스트용 인증번호가 발송되었습니다. (123456)");
+      } else {
+        await sendResetPasswordEmailCode({ email });
         alert("인증번호가 이메일로 발송되었습니다.");
-      } catch (err) {
-        setError("인증번호 전송 실패: " + (err.response?.data?.message || "오류 발생"));
       }
+
+      setSent(true);
+      setTimer(180);
+
+      const countdown = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdown);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      setCountdownId(countdown);
+    } catch (err) {
+      setError("인증번호 전송 실패: " + (err.response?.data?.message || "오류 발생"));
+    } finally {
+      setTimeout(() => setDisabled(false), 1000);
     }
-
-    setTimeout(() => setDisabled(false), 3000);
-
-    const countdown = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdown);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
   };
 
   const handleVerify = async () => {
@@ -71,6 +76,7 @@ export default function PasswordReset1() {
 
     try {
       await verifyEmailCode({ email, code });
+      alert("인증이 완료되었습니다.");
       navigate("/password-reset2", { state: { email } });
     } catch (err) {
       setError("인증 실패: " + (err.response?.data?.message || "오류 발생"));
@@ -93,7 +99,7 @@ export default function PasswordReset1() {
             {sent && timer > 0 && (
               <div className="mt-1 pl-5 ml-12">
                 <p className="text-xs text-red-500 ml-12">남은 시간: {formatTime(timer)}</p>
-              </div>
+            </div>
             )}
           </div>
 
@@ -102,6 +108,7 @@ export default function PasswordReset1() {
             placeholder="인증번호"
             value={code}
             onChange={(e) => setCode(e.target.value)}
+            disabled={!sent}
           />
 
           <div className="flex justify-center gap-4 mt-2">
@@ -135,4 +142,7 @@ export default function PasswordReset1() {
     </div>
   );
 }
+
+
+
 

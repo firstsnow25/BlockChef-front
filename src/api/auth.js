@@ -40,9 +40,17 @@ export const verifyEmailCode = async ({ email, code }) => {
   return response.data;
 };
 
-// 5. 이메일 인증 코드 보내기
-export const sendEmailCode = async ({ email }) => {
-  const response = await axiosInstance.post("/auth/email/send-code", {
+// 5. 회원가입 인증코드 보내기
+export const sendSignUpEmailCode = async ({ email }) => {
+  const response = await axiosInstance.post("/auth/email/signup/send-code", {
+    email,
+  });
+  return response.data;
+};
+
+// 6. 비밀번호 재설정 인증코드 보내기
+export const sendResetPasswordEmailCode = async ({ email }) => {
+  const response = await axiosInstance.post("/auth/email/reset-password/send-code", {
     email,
   });
   return response.data;
