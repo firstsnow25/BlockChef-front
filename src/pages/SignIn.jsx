@@ -13,22 +13,34 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  const useTestLogin = false;//실제시 이부분 false로 교체!!
+
   const handleLogin = async () => {
     if (!email || !password) {
       setError("아이디와 비밀번호를 입력해주세요.");
       return;
     }
-
+    
     if (!email.includes("@")) {
       setError("올바른 이메일 형식을 입력해주세요.");
       return;
     }
 
+    if (useTestLogin) {
+      if (email === "test@test.com" && password === "1234") {
+        alert("테스트 로그인 성공!");
+        navigate("/main");
+        return;
+      } else {
+        setError("테스트 로그인 정보가 일치하지 않습니다.");
+        return;
+      }
+    }
     try {
       await login({ email, password });
       setError("");
       alert("로그인 성공!");
-      navigate("/start");
+      navigate("/main");
     } catch (err) {
       console.error(err);
       setError("아이디 또는 비밀번호가 일치하지 않습니다.");
@@ -50,6 +62,8 @@ export default function SignIn() {
           placeholder="이메일"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          className="w-[300px]"
+          
         />
 
         <InputField
@@ -57,6 +71,7 @@ export default function SignIn() {
           placeholder="비밀번호"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="w-[300px]"
         />
 
         {error && <p className="text-sm text-red-500 text-center mt-2">{error}</p>}

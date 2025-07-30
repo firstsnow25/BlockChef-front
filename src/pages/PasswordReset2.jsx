@@ -48,18 +48,21 @@ export default function PasswordReset2() {
         <h2 className="text-2xl font-semibold text-center mt-20 mb-20">비밀번호 재설정</h2>
 
         <div className="space-y-5">
-          <InputField type="email" value={email} disabled />
+          <InputField type="email" value={email} disabled
+            className="w-[350px]"/>
           <InputField
             type="password"
             placeholder="새 비밀번호"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-[350px]"
           />
           <InputField
             type="password"
             placeholder="비밀번호 재입력"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-[350px]"
           />
             {error && <p className="text-sm text-red-500 text-center">{error}</p>}
             <div className="flex justify-center">

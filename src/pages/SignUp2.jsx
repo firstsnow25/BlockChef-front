@@ -41,24 +41,28 @@ const handleSignUp = async () => {
       <ShadowBox>
         <h2 className="text-2xl font-semibold text-center mt-20 mb-20">회원가입</h2>
         <div className="space-y-5">
-          <InputField type="email" value={email} disabled />
+          <InputField type="email" value={email} disabled 
+            className="w-[350px]"/>
           <InputField
             type="text"
             placeholder="이름"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            className="w-[350px]"
           />
           <InputField
             type="password"
             placeholder="비밀번호"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-[350px]"
           />
           <InputField
             type="password"
             placeholder="비밀번호 재입력"
             value={passwordCheck}
             onChange={(e) => setPasswordCheck(e.target.value)}
+            className="w-[350px]"
           />
             {error && <p className="text-sm text-red-500 text-center">{error}</p>}
             <div className="flex justify-center">

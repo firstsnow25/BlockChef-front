@@ -9,4 +9,14 @@ const axiosInstance = axios.create({
   },
 });
 
+// axiosInstance.js 내에 추가
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+
 export default axiosInstance;

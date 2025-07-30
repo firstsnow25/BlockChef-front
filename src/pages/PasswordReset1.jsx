@@ -95,6 +95,7 @@ export default function PasswordReset1() {
               placeholder="이메일"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-[350px]"
             />
             {sent && timer > 0 && (
               <div className="mt-1 pl-5 ml-12">
@@ -109,6 +110,7 @@ export default function PasswordReset1() {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             disabled={!sent}
+            className="w-[350px]"
           />
 
           <div className="flex justify-center gap-4 mt-2">
