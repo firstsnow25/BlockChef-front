@@ -13,14 +13,14 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const useTestLogin = false;//실제시 이부분 false로 교체!!
+  const useTestLogin = false; // 실제시 이부분 false로 교체!!
 
   const handleLogin = async () => {
     if (!email || !password) {
       setError("아이디와 비밀번호를 입력해주세요.");
       return;
     }
-    
+
     if (!email.includes("@")) {
       setError("올바른 이메일 형식을 입력해주세요.");
       return;
@@ -29,6 +29,8 @@ export default function SignIn() {
     if (useTestLogin) {
       if (email === "test@test.com" && password === "1234") {
         alert("테스트 로그인 성공!");
+        // ✅ 테스트 모드일 때도 임시 토큰 저장
+        localStorage.setItem("token", "test-token");
         navigate("/main");
         return;
       } else {
@@ -36,8 +38,11 @@ export default function SignIn() {
         return;
       }
     }
+
     try {
-      await login({ email, password });
+      const response = await login({ email, password });
+      // ✅ 로그인 성공 시 토큰 저장
+      localStorage.setItem("token", response.token); // <- 실제 백엔드 응답 구조에 맞게 조정 필요
       setError("");
       alert("로그인 성공!");
       navigate("/main");
@@ -63,7 +68,6 @@ export default function SignIn() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-[300px]"
-          
         />
 
         <InputField
@@ -74,7 +78,9 @@ export default function SignIn() {
           className="w-[300px]"
         />
 
-        {error && <p className="text-sm text-red-500 text-center mt-2">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-500 text-center mt-2">{error}</p>
+        )}
 
         <LoginButton
           text="로그인"
@@ -98,6 +104,7 @@ export default function SignIn() {
     </div>
   );
 }
+
 
 
 

@@ -22,12 +22,15 @@ export const resetPassword = async ({ email, password, passwordCheck }) => {
   return response.data;
 };
 
-// 3. 로그인
+// ✅ 3. 로그인 - 토큰을 저장까지 하도록 수정
 export const login = async ({ email, password }) => {
   const response = await axiosInstance.post("/auth/login", {
     email,
     password,
   });
+  
+  // JWT 토큰 저장
+  localStorage.setItem("token", response.data.token);
   return response.data;
 };
 
@@ -55,3 +58,4 @@ export const sendResetPasswordEmailCode = async ({ email }) => {
   });
   return response.data;
 };
+
