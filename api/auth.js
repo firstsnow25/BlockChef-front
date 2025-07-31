@@ -39,7 +39,7 @@ export const login = async ({ email, password }) => {
   console.log("✅ 로그인 응답:", response.data);
 
   // ⛔ 이 부분이 틀렸을 수 있음
-  localStorage.setItem("token", response.data.token); 
+  localStorage.setItem("token", response.data); 
 
   return response.data;
 };
