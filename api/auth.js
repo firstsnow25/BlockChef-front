@@ -29,19 +29,14 @@ export const login = async ({ email, password }) => {
     password,
   });
 
- /* const token = response.data.token;
+  const token = response.data.token;
   if (token) {
     console.log("✅ 저장된 토큰:", token);
     localStorage.setItem("token", token); // 이 줄이 없으면 반드시 추가!
   } else {
     console.error("❌ 응답에 토큰이 없습니다.");
-  }*/
-  console.log("✅ 로그인 응답:", response.data);
-
-  // ⛔ 이 부분이 틀렸을 수 있음
-  localStorage.setItem("token", response.data); 
-
-  return response.data;
+  }
+  
 };
 
 // 4. 이메일 인증 (코드 확인)
