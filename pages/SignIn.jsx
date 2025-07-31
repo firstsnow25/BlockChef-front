@@ -41,9 +41,9 @@ export default function SignIn() {
 
     try {
       const response = await login({ email, password });
-      console.log("✅ 로그인 응답:", data);
+      console.log("✅ 로그인 응답:", response);
       // ✅ 로그인 성공 시 토큰 저장
-      localStorage.setItem("token", response.token); // <- 실제 백엔드 응답 구조에 맞게 조정 필요
+      localStorage.setItem("token", response); // <- 실제 백엔드 응답 구조에 맞게 조정 필요
       setError("");
       alert("로그인 성공!");
       navigate("/main");
