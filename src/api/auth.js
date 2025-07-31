@@ -22,15 +22,32 @@ export const resetPassword = async ({ email, password, passwordCheck }) => {
   return response.data;
 };
 
-// ✅ 3. 로그인 - 토큰을 저장까지 하도록 수정
+// ✅ 3. 로그인 - 토큰 저장 및 콘솔 디버깅 추가
 export const login = async ({ email, password }) => {
   const response = await axiosInstance.post("/auth/login", {
     email,
     password,
   });
-  
-  // JWT 토큰 저장
-  localStorage.setItem("token", response.data.token);
+
+  // ✅ 응답 구조를 확인하기 위한 콘솔 로그
+  console.log("🔥 전체 응답:", response);
+  console.log("🔥 response.data:", response.data);
+  console.log("🔥 response.data.token:", response.data.token); // 이게 undefined면 구조 확인 필요
+  console.log("🔥 response.data.data:", response.data.data);   // 여기에 token 있을 가능성
+
+  // ✅ 실제 토큰 저장 로직
+  const token =
+    response.data.token ||         // 일반 구조: { token: "..." }
+    response.data.data?.token ||   // 혹시 nested 구조인 경우: { data: { token: "..." } }
+    null;
+
+  if (token) {
+    localStorage.setItem("token", token);
+    console.log("✅ 저장된 토큰:", token);
+  } else {
+    console.error("❌ JWT 토큰이 응답에 없습니다.");
+  }
+
   return response.data;
 };
 
