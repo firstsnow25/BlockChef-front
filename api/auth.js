@@ -37,7 +37,7 @@ export const login = async ({ email, password }) => {
 
   // ✅ 실제 토큰 저장 로직
   const token =
-    response.data.token ||         // 일반 구조: { token: "..." }
+    response.data ||         // 일반 구조: { token: "..." }
     response.data.data?.token ||   // 혹시 nested 구조인 경우: { data: { token: "..." } }
     null;
 
