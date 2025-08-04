@@ -5,6 +5,7 @@ import blockChefImage from "../assets/block_chef.png";
 import InputField from "../components/InputField";
 import GeneralButton from "../components/GeneralButton";
 import { fetchMyRecipes, deleteRecipe } from "../api/recipeApi";
+import TopNavbar from "../components/TopNavbar";
 
 export default function MyRecipe() {
   const [tagSearch, setTagSearch] = useState("");
@@ -89,58 +90,8 @@ export default function MyRecipe() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      {/* 상단 내비게이션 */}
-      <div className="flex justify-between items-center px-8 py-4 border-b border-gray-200 relative bg-white">
-        <div className="flex items-center">
-          <img src={blockChefImage} alt="BlockChef" className="w-8 h-8 mr-2" />
-          <span className="text-xl font-semibold text-orange-500">BlockChef</span>
-        </div>
-        <div className="flex gap-6 text-sm items-center">
-          <button
-            onClick={() => handleTopNav("main")}
-            className={`${activeMenu === "main" ? "text-orange-500 font-semibold" : "text-black"}`}
-          >
-            레시피 만들기
-          </button>
-          <span>|</span>
-          <button
-            onClick={() => handleTopNav("my")}
-            className={`${activeMenu === "my" ? "text-orange-500 font-semibold" : "text-black"}`}
-          >
-            나의 레시피
-          </button>
-          <span>|</span>
-          <div className="relative">
-            <button
-              onClick={() => {
-                setActiveMenu("chef");
-                setShowProfileMenu((prev) => !prev);
-              }}
-              className={`${activeMenu === "chef" ? "text-orange-500 font-semibold" : "text-black"}`}
-            >
-              Chef ▾
-            </button>
-            {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-md z-10 py-4">
-                <div className="absolute top-[-8px] right-6 w-4 h-4 bg-white border-l border-t border-gray-300 rotate-45"></div>
-                <p className="text-center font-semibold mb-4">Chef</p>
-                <div className="flex justify-around">
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigate("/my-info");
-                    }}
-                    className="bg-orange-300 text-white px-3 py-1 rounded-full text-sm"
-                  >
-                    내 정보
-                  </button>
-                  <button className="bg-orange-300 text-white px-3 py-1 rounded-full text-sm">로그아웃</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <TopNavbar activeMenu="my" />
+
 
       {/* 본문 */}
       <div className="flex px-6 py-8 gap-6">

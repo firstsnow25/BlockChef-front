@@ -11,13 +11,13 @@ export default function TopNavbar() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [userId, setUserId] = useState("");
   const [activeMenu, setActiveMenu] = useState("chef");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // 유저 정보 불러오기
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const data = await fetchMyInfo();
-        setUserId(data.email.split("@")[0]); // 이메일 앞부분만
+        setUserId(data.email.split("@")[0]);
       } catch (err) {
         alert("로그인이 필요합니다.");
         navigate("/signin");
@@ -26,34 +26,31 @@ export default function TopNavbar() {
     fetchUser();
   }, [navigate]);
 
-  // 현재 경로에 따라 메뉴 상태 설정
   useEffect(() => {
     if (location.pathname.includes("/main")) setActiveMenu("main");
     else if (location.pathname.includes("/my-recipe")) setActiveMenu("my");
     else if (location.pathname.includes("/my-info")) setActiveMenu("chef");
   }, [location]);
 
-  // 바깥 클릭 시 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setShowProfileMenu(false);
+        setShowLogoutConfirm(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 메뉴 이동 핸들러
   const handleTopNav = (target) => {
     setActiveMenu(target);
     if (target === "main") navigate("/main");
     else if (target === "my") navigate("/my-recipe");
   };
 
-  // 로그아웃 핸들러
-  const handleLogout = () => {
-    localStorage.removeItem("token"); // JWT 제거
+  const executeLogout = () => {
+    localStorage.removeItem("token");
     alert("로그아웃되었습니다.");
     navigate("/signin");
   };
@@ -89,6 +86,7 @@ export default function TopNavbar() {
           >
             {userId || "Chef"} ▾
           </button>
+
           {showProfileMenu && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-md z-10 py-4">
               <div className="absolute top-[-8px] right-6 w-4 h-4 bg-white border-l border-t border-gray-300 rotate-45"></div>
@@ -104,10 +102,31 @@ export default function TopNavbar() {
                   내 정보
                 </button>
                 <button
-                  onClick={handleLogout}
+                  onClick={() => setShowLogoutConfirm(true)}
                   className="bg-orange-300 text-white px-3 py-1 rounded-full text-sm"
                 >
                   로그아웃
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 로그아웃 확인 팝업 */}
+          {showLogoutConfirm && (
+            <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-300 shadow-lg rounded-md z-20 py-4 px-4">
+              <p className="text-center text-sm mb-3 font-medium">로그아웃하시겠습니까?</p>
+              <div className="flex justify-between">
+                <button
+                  onClick={executeLogout}
+                  className="bg-red-400 text-white px-4 py-1 rounded-full text-sm"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="bg-gray-300 text-black px-4 py-1 rounded-full text-sm"
+                >
+                  No
                 </button>
               </div>
             </div>
@@ -117,3 +136,4 @@ export default function TopNavbar() {
     </div>
   );
 }
+

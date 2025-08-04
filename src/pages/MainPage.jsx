@@ -11,25 +11,22 @@ import {
   Play,
   Save,
 } from "lucide-react";
-import blockChefImage from "../assets/block_chef.png";
+import TopNavbar from "../components/TopNavbar"; // ✅ 상단 내비게이션 컴포넌트
 import { saveRecipe, fetchRecipeDetail } from "../api/recipeApi";
 
 export default function MainPage() {
   const [activeTab, setActiveTab] = useState("재료");
   const [ingredients, setIngredients] = useState(["당근", "브로콜리"]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeMenu, setActiveMenu] = useState("main");
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSavePopup, setShowSavePopup] = useState(false);
   const [recipeTitle, setRecipeTitle] = useState("");
   const [recipeDescription, setRecipeDescription] = useState("");
   const [recipeTags, setRecipeTags] = useState("");
-  const [recipeXml, setRecipeXml] = useState(""); // XML 저장
+  const [recipeXml, setRecipeXml] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 상세 조회 시 쿼리스트링에서 id 확인
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const recipeId = params.get("id");
@@ -45,26 +42,14 @@ export default function MainPage() {
       setRecipeDescription(data.description);
       setRecipeTags(data.tags.join(", "));
       setRecipeXml(data.xml || "");
-
-      // TODO: Blockly workspace 복원 필요 시 여기에 삽입
-      // Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(data.xml), workspace);
     } catch (err) {
       console.error("레시피 불러오기 실패:", err);
     }
   };
 
-  const handleTopNav = (menu) => {
-    setActiveMenu(menu);
-    setShowProfileMenu(false);
-    if (menu === "my") navigate("/my-recipe");
-  };
-
   const handleSave = async () => {
     try {
-      // TODO: Blockly 워크스페이스에서 xml 가져오기
-      // const xml = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace));
-      const xml = recipeXml; // 임시 대체 (실제 구현 시 위 라인으로 교체)
-
+      const xml = recipeXml; // 실제 구현 시 Blockly XML로 대체
       await saveRecipe({
         title: recipeTitle,
         description: recipeDescription,
@@ -138,32 +123,7 @@ export default function MainPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      {/* 상단 내비게이션 */}
-      <div className="flex justify-between items-center px-8 py-4 border-b border-gray-200 relative">
-        <div className="flex items-center">
-          <img src={blockChefImage} alt="BlockChef" className="w-8 h-8 mr-2" />
-          <span className="text-xl font-semibold text-orange-500">BlockChef</span>
-        </div>
-        <div className="flex gap-6 text-sm items-center">
-          <button onClick={() => handleTopNav("main")} className={`${activeMenu === "main" ? "text-orange-500 font-semibold" : "text-black"}`}>레시피 만들기</button>
-          <span>|</span>
-          <button onClick={() => handleTopNav("my")} className={`${activeMenu === "my" ? "text-orange-500 font-semibold" : "text-black"}`}>나의 레시피</button>
-          <span>|</span>
-          <div className="relative">
-            <button onClick={() => { setActiveMenu("chef"); setShowProfileMenu((prev) => !prev); }} className={`${activeMenu === "chef" ? "text-orange-500 font-semibold" : "text-black"}`}>Chef ▾</button>
-            {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-md z-10 py-4">
-                <div className="absolute top-[-8px] right-6 w-4 h-4 bg-white border-l border-t border-gray-300 rotate-45"></div>
-                <p className="text-center font-semibold mb-4">Chef</p>
-                <div className="flex justify-around">
-                  <button onClick={() => { setShowProfileMenu(false); navigate("/my-info"); }} className="bg-orange-300 text-white px-3 py-1 rounded-full text-sm">내 정보</button>
-                  <button className="bg-orange-300 text-white px-3 py-1 rounded-full text-sm">로그아웃</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <TopNavbar /> {/* ✅ 상단 내비게이션 삽입 */}
 
       {/* 본문 */}
       <div className="flex flex-row flex-1">
@@ -210,6 +170,7 @@ export default function MainPage() {
     </div>
   );
 }
+
 
 
 
