@@ -82,9 +82,9 @@ export default function InfoEdit() {
           <span className="text-xl font-semibold text-orange-500">BlockChef</span>
         </div>
         <div className="flex gap-6 text-sm items-center">
-          <button onClick={() => handleTopNav("main")} className={`text-black`}>레시피 만들기</button>
+          <button onClick={() => handleTopNav("main")} className="text-black">레시피 만들기</button>
           <span>|</span>
-          <button onClick={() => handleTopNav("my")} className={`text-black`}>나의 레시피</button>
+          <button onClick={() => handleTopNav("my")} className="text-black">나의 레시피</button>
           <span>|</span>
           <div className="relative" ref={menuRef}>
             <button onClick={() => setShowProfileMenu((prev) => !prev)} className="text-black">
@@ -111,7 +111,12 @@ export default function InfoEdit() {
           {/* 이름 */}
           <div className="flex items-center gap-4 border-b pb-2">
             <label className="w-32">이름:</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="flex-1 border-b border-gray-300 focus:outline-none px-2 py-1" />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="flex-1 border-b border-gray-300 focus:outline-none px-2 py-1"
+            />
           </div>
 
           {/* 이메일 */}
@@ -123,37 +128,43 @@ export default function InfoEdit() {
           {/* 비밀번호 */}
           <div className="flex items-center gap-4 border-b pb-2">
             <label className="w-32">비밀번호:</label>
-            <input type="password" onChange={(e) => setPassword(e.target.value)} className="flex-1 border-b border-gray-300 focus:outline-none px-2 py-1" />
+            <input
+              type="password"
+              onChange={(e) => setPassword(e.target.value)}
+              className="flex-1 border-b border-gray-300 focus:outline-none px-2 py-1"
+            />
           </div>
 
-          {/* 비밀번호 확인 */}
-          <div className="flex items-center gap-4 border-b pb-1">
-            <label className="w-32">비밀번호 확인:</label>
-            <input type="password" onChange={(e) => setConfirmPassword(e.target.value)} className="flex-1 border-b border-gray-300 focus:outline-none px-2 py-1" />
-          </div>
-
-          <div className="flex flex-col items-end mt-2">
-            {confirmPassword && (
-              <p
-                className={`text-sm mb-2 ${
-                  isPasswordMatch ? "text-green-500" : "text-red-500"
-                }`}
+          {/* 비밀번호 확인 + 버튼 */}
+          <div className="flex flex-col items-start border-b pb-1 w-full">
+            <div className="flex items-center gap-4 w-full">
+              <label className="w-32">비밀번호 확인:</label>
+              <input
+                type="password"
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="flex-1 border-b border-gray-300 focus:outline-none px-2 py-1"
+              />
+            </div>
+            <div className="flex items-center justify-between w-full mt-2 pr-1">
+              {confirmPassword && (
+                <p className={`text-sm ${isPasswordMatch ? "text-green-500" : "text-red-500"}`}>
+                  {isPasswordMatch ? "비밀번호 일치" : "비밀번호 불일치"}
+                </p>
+              )}
+              <button
+                onClick={handleConfirm}
+                className="bg-orange-300 text-white px-6 py-2 rounded-full"
               >
-                {isPasswordMatch ? "비밀번호 일치" : "비밀번호 불일치"}
-              </p>
-            )}
-          
-            <button
-              onClick={handleConfirm}
-              className="bg-orange-300 text-white px-6 py-2 rounded-full"
-            >
-              수정 확인
-            </button>
+                수정 확인
+              </button>
+            </div>
           </div>
+        </div>
       </div>
     </div>
   );
 }
+
 
 
 
