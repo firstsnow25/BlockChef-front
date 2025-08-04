@@ -118,6 +118,7 @@ export default function MyInfo() {
           >
             회원탈퇴
           </button>
+        </div>
           <div className="w-full flex justify-end mt-6">
             <button
               onClick={() => navigate("/info-edit")}
@@ -126,10 +127,10 @@ export default function MyInfo() {
               수정하기
             </button>
           </div>
-        </div>
       </div>
     </div>
   );
 }
+
 
 
