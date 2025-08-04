@@ -78,9 +78,8 @@ export default function InfoEdit() {
             />
           </div>
 
-          {/* 비밀번호 확인 + 버튼 */}
-          <div className="border-b pb-4">
-            <div className="flex items-center gap-4">
+          {/* 비밀번호 확인 */}
+            <div className="flex items-center gap-4 border-b pb-2">
               <label className="w-32">비밀번호 확인:</label>
               <input
                 type="password"
@@ -88,12 +87,12 @@ export default function InfoEdit() {
                 className="flex-1 border-b border-gray-300 focus:outline-none px-2 py-1"
               />
             </div>
-            <div className="flex justify-between items-center mt-2">
-              {confirmPassword && (
-                <p className={`text-sm ${isPasswordMatch ? "text-green-500" : "text-red-500"}`}>
-                  {isPasswordMatch ? "비밀번호 일치" : "비밀번호 불일치"}
-                </p>
-              )}
+
+            {/* 하단 메시지 + 버튼 (고정 배치) */}
+            <div className="flex justify-end items-center mt-4 space-x-4 min-h-[24px]">
+              <p className={`text-sm w-32 text-right ${isPasswordMatch ? "text-green-500" : "text-red-500"}`}>
+                {confirmPassword ? (isPasswordMatch ? "비밀번호 일치" : "비밀번호 불일치") : ""}
+              </p>
               <button
                 onClick={handleConfirm}
                 className="bg-orange-300 text-white px-6 py-2 rounded-full"
@@ -101,12 +100,12 @@ export default function InfoEdit() {
                 수정 확인
               </button>
             </div>
-          </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 
 
