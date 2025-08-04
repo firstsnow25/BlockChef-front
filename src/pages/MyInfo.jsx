@@ -118,15 +118,18 @@ export default function MyInfo() {
           >
             회원탈퇴
           </button>
-          <button
-            onClick={() => navigate("/info-edit")}
-            className="bg-orange-300 text-white px-5 py-2 rounded-full"
-          >
-            수정하기
-          </button>
+          <div className="w-full flex justify-end mt-6">
+            <button
+              onClick={() => navigate("/info-edit")}
+              className="bg-orange-300 text-white px-5 py-2 rounded-full"
+            >
+              수정하기
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
 
