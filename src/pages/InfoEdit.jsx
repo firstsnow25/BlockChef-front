@@ -98,12 +98,12 @@ export default function InfoEdit() {
         <div className="space-y-4 w-full max-w-md">
           {/* 이름 */}
           <div className="flex justify-between items-center border-b pb-2">
-            <label className="mr-4">이름:</label>
+            <label className="mr-2">이름:</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="border-b border-gray-300 focus:outline-none px-2 py-1 w-full text-right"
+              className="border-b border-gray-300 focus:outline-none px-2 py-1 w-full text-center"
             />
           </div>
 
@@ -154,4 +154,5 @@ export default function InfoEdit() {
     </div>
   );
 }
+
 
