@@ -3,24 +3,24 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import InputField from "../components/InputField";
 import LoginButton from "../components/LoginButton";
-import GeneralButton from "../components/GeneralButton";
+import TagInput from "../components/TagInput";
 import {
   ChevronLeft,
   ChevronRight,
   Trash2,
   Save,
 } from "lucide-react";
-import TopNavbar from "../components/TopNavbar"; // ✅ 상단 내비게이션 컴포넌트
+import TopNavbar from "../components/TopNavbar";
 import { saveRecipe, fetchRecipeDetail } from "../api/recipeApi";
 
 export default function MainPage() {
-  const [activeTab, setActiveTab] = useState("재료");
-  const [ingredients, setIngredients] = useState(["당근", "브로콜리"]);
+  const [activeTab, setActiveTab] = useState("과장");
+  const [ingredients, setIngredients] = useState(["당글", "브로켈리"]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSavePopup, setShowSavePopup] = useState(false);
   const [recipeTitle, setRecipeTitle] = useState("");
   const [recipeDescription, setRecipeDescription] = useState("");
-  const [recipeTags, setRecipeTags] = useState("");
+  const [tags, setTags] = useState([]);
   const [recipeXml, setRecipeXml] = useState("");
   const [titleError, setTitleError] = useState(false);
   const [tagsError, setTagsError] = useState(false);
@@ -41,7 +41,7 @@ export default function MainPage() {
       const data = await fetchRecipeDetail(id);
       setRecipeTitle(data.title);
       setRecipeDescription(data.description);
-      setRecipeTags(data.tags.join(", "));
+      setTags(data.tags.map((tag) => `#${tag}`));
       setRecipeXml(data.xml || "");
     } catch (err) {
       console.error("레시피 불러오기 실패:", err);
@@ -49,29 +49,21 @@ export default function MainPage() {
   };
 
   const handleSave = async () => {
-    setTitleError(false);
-    setTagsError(false);
+    if (!recipeTitle.trim()) setTitleError(true);
+    else setTitleError(false);
 
-    const parsedTags = recipeTags
-      .split("#")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag !== "");
+    if (tags.length === 0) setTagsError(true);
+    else setTagsError(false);
 
-    if (!recipeTitle.trim()) {
-      setTitleError(true);
-    }
-    if (parsedTags.length === 0) {
-      setTagsError(true);
-    }
-
-    if (!recipeTitle.trim() || parsedTags.length === 0) return;
+    if (!recipeTitle.trim() || tags.length === 0) return;
 
     try {
       const xml = recipeXml;
+      const cleanedTags = tags.map((tag) => tag.replace(/^#/, ""));
       await saveRecipe({
         title: recipeTitle,
         description: recipeDescription,
-        tags: parsedTags,
+        tags: cleanedTags,
         xml,
       });
       alert("레시피가 저장되었습니다!");
@@ -94,7 +86,6 @@ export default function MainPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full"
             />
-            {/* ✅ 재료 추가/수정 버튼 제거됨 */}
             {ingredients
               .filter((item) => item.includes(searchTerm))
               .map((item, index) => (
@@ -132,7 +123,6 @@ export default function MainPage() {
     <div className="flex flex-col min-h-screen bg-white">
       <TopNavbar />
 
-      {/* 본문 */}
       <div className="flex flex-row flex-1">
         <div className="w-[120px] border-r border-gray-200 p-2">
           {["재료", "동작", "흐름"].map((tab) => (
@@ -145,38 +135,24 @@ export default function MainPage() {
           ))}
         </div>
 
-        <div className="w-[260px] border-r border-gray-200 p-4">{renderBlocks()}</div>
+        <div className="w-[260px] border-r border-gray-200 p-4">
+          {renderBlocks()}
+        </div>
 
         <div className="flex-1 bg-gray-100 relative">
           <div className="absolute inset-4 border-2 border-gray-300 bg-white rounded-xl">
             {/* Blockly 삽입 예정 */}
           </div>
 
-          <div className="absolute top-4 left-4 flex gap-4 items-center">
-            <div className="group relative">
-              <ChevronLeft className="text-orange-400 cursor-pointer" />
-              <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-0.5 opacity-0 group-hover:opacity-100">되돌리기</span>
-            </div>
-            <div className="group relative">
-              <ChevronRight className="text-orange-400 cursor-pointer" />
-              <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-0.5 opacity-0 group-hover:opacity-100">다시 실행</span>
-            </div>
-            <div className="group relative">
-              <Trash2 className="text-orange-400 cursor-pointer" />
-              <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-0.5 opacity-0 group-hover:opacity-100">삭제</span>
-            </div>
-            <div className="group relative">
-              <Save
-                className="text-orange-400 cursor-pointer"
-                onClick={() => setShowSavePopup(true)}
-              />
-              <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-0.5 opacity-0 group-hover:opacity-100">저장</span>
-            </div>
+          <div className="absolute bottom-[20px] right-[20px] flex gap-4 items-center">
+            <ChevronLeft className="text-orange-400 cursor-pointer" title="되돌리기" />
+            <ChevronRight className="text-orange-400 cursor-pointer" title="기존으로 돌아가기" />
+            <Trash2 className="text-orange-400 cursor-pointer" title="삭제" />
+            <Save className="text-orange-400 cursor-pointer" onClick={() => setShowSavePopup(true)} title="저장" />
           </div>
         </div>
       </div>
 
-      {/* 레시피 저장 팝업 */}
       {showSavePopup && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg p-6 w-[400px] shadow-lg">
@@ -188,34 +164,18 @@ export default function MainPage() {
               onChange={(e) => setRecipeTitle(e.target.value)}
               className="w-full border border-gray-300 px-3 py-2 rounded mb-1"
             />
-            {titleError && <p className="text-red-500 text-sm mb-1">제목을 입력해주세요.</p>}
-
+            {titleError && <p className="text-red-500 text-sm mb-2">제목을 입력해주세요.</p>}
             <textarea
               placeholder="설명"
               value={recipeDescription}
               onChange={(e) => setRecipeDescription(e.target.value)}
-              className="w-full border border-gray-300 px-3 py-2 rounded mb-1 resize-none"
+              className="w-full border border-gray-300 px-3 py-2 rounded mb-2 resize-none"
             />
-
-            <input
-              type="text"
-              placeholder="#찌개 #볶음"
-              value={recipeTags}
-              onChange={(e) => setRecipeTags(e.target.value)}
-              className="w-full border border-gray-300 px-3 py-2 rounded mb-1"
-            />
-            {tagsError && <p className="text-red-500 text-sm mb-1">태그를 하나 이상 입력해주세요.</p>}
-
-            <div className="flex justify-end gap-3 mt-2">
-              <button onClick={() => setShowSavePopup(false)} className="text-gray-500">
-                취소
-              </button>
-              <button
-                onClick={handleSave}
-                className="bg-orange-400 text-white px-4 py-1 rounded"
-              >
-                저장
-              </button>
+            <TagInput tags={tags} setTags={setTags} />
+            {tagsError && <p className="text-red-500 text-sm mt-2">태그를 하나 이상 입력해주세요.</p>}
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => setShowSavePopup(false)} className="text-gray-500">취소</button>
+              <button onClick={handleSave} className="bg-orange-400 text-white px-4 py-1 rounded">저장</button>
             </div>
           </div>
         </div>
