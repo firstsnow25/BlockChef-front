@@ -84,7 +84,7 @@ export default function TopNavbar() {
             }}
             className={`${activeMenu === "chef" ? "text-orange-500 font-semibold" : "text-black"}`}
           >
-            {userId || "Chef"} ▾
+            {userId} ▾
           </button>
 
           {showProfileMenu && (
@@ -136,5 +136,6 @@ export default function TopNavbar() {
     </div>
   );
 }
+
 
 
