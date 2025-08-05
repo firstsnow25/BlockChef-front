@@ -17,6 +17,7 @@ export default function InputField({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         disabled={disabled}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
@@ -28,3 +29,4 @@ export default function InputField({
     </div>
   );
 }
+
