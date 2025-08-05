@@ -68,6 +68,7 @@ export default function SignIn() {
           placeholder="이메일"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
           className="w-[300px]"
         />
 
@@ -76,6 +77,7 @@ export default function SignIn() {
           placeholder="비밀번호"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
           className="w-[300px]"
         />
 
@@ -105,6 +107,7 @@ export default function SignIn() {
     </div>
   );
 }
+
 
 
 
