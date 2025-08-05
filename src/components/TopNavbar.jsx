@@ -90,7 +90,7 @@ export default function TopNavbar() {
           {showProfileMenu && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-md z-10 py-4">
               <div className="absolute top-[-8px] right-6 w-4 h-4 bg-white border-l border-t border-gray-300 rotate-45"></div>
-              <p className="text-center font-semibold mb-4">{userId || "Chef"}</p>
+              <p className="text-center font-semibold mb-4">{userId}</p>
               <div className="flex justify-around">
                 <button
                   onClick={() => {
@@ -136,4 +136,5 @@ export default function TopNavbar() {
     </div>
   );
 }
+
 
