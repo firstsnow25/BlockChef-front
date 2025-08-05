@@ -84,7 +84,7 @@ export default function TopNavbar() {
             }}
             className={`${activeMenu === "chef" ? "text-orange-500 font-semibold" : "text-black"}`}
           >
-            {userId} ▾
+            내정보 ▾
           </button>
 
           {showProfileMenu && (
@@ -136,6 +136,7 @@ export default function TopNavbar() {
     </div>
   );
 }
+
 
 
 
