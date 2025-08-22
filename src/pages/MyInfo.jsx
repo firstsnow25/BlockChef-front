@@ -70,7 +70,7 @@ export default function MyInfo() {
             <span>●●●●●●</span>
           </div>
         </div>
-        <div className="mt-6 flex gap-4">
+        <div className="mt-10 flex items-center justify-start gap-3">
           <button
             onClick={handleDelete}
             className="bg-red-300 text-white px-5 py-2 rounded-full"
@@ -78,16 +78,17 @@ export default function MyInfo() {
             회원탈퇴
           </button>
           <button
-              onClick={() => navigate("/info-edit")}
-              className="bg-orange-300 text-white px-5 py-2 rounded-full"
-            >
-              수정하기
-            </button>
+            onClick={() => navigate("/info-edit")}
+            className="bg-orange-300 text-white px-5 py-2 rounded-full ml-4"
+          >
+            수정하기
+          </button>
         </div>  
       </div>
     </div>
   );
 }
+
 
 
 
