@@ -7,10 +7,12 @@ import { ChevronLeft, ChevronRight, Trash2, Save } from "lucide-react";
 import TopNavbar from "../components/TopNavbar";
 import { saveRecipe, fetchRecipeDetail } from "../api/recipeApi";
 import BlocklyArea from "../components/BlocklyArea";
+// ✅ 버튼을 catalog의 순서와 동기화
+import { CATEGORY_ORDER } from "../blockly/catalog";
 
 export default function MainPage() {
-  // ✅ Scratch처럼: 기본 카테고리는 "재료"
-  const [activeTab, setActiveTab] = useState("재료");
+  // 기본 카테고리: catalog의 첫 항목
+  const [activeTab, setActiveTab] = useState(CATEGORY_ORDER[0]);
 
   const [showSavePopup, setShowSavePopup] = useState(false);
   const [recipeTitle, setRecipeTitle] = useState("");
@@ -76,9 +78,9 @@ export default function MainPage() {
       <TopNavbar />
 
       <div className="flex flex-row flex-1">
-        {/* ⬅️ 카테고리 버튼 (Scratch의 왼쪽 메뉴) */}
+        {/* ⬅️ 카테고리 버튼 (팔레트 전환 전용) */}
         <div className="w-[120px] border-r border-gray-200 p-2">
-          {["재료", "동작", "흐름"].map((tab) => (
+          {CATEGORY_ORDER.map((tab) => (
             <LoginButton
               key={tab}
               text={tab}
@@ -88,15 +90,14 @@ export default function MainPage() {
           ))}
         </div>
 
-        {/* ➡️ Blockly 워크스페이스 (툴박스/플라이아웃 + 작업영역) */}
-        {/* 중간의 '검은 패널'은 제거: Scratch처럼 워크스페이스 왼쪽에 플라이아웃이 뜸 */}
+        {/* ➡️ Blockly 워크스페이스 (팔레트 + 작업영역) */}
         <div className="flex-1 bg-gray-100 relative">
           <div className="absolute inset-4 border-2 border-gray-300 bg-white rounded-xl overflow-hidden">
             <BlocklyArea
               ref={blocklyRef}
               initialXml={recipeXml}
               onXmlChange={(xml) => setRecipeXml(xml)}
-              activeCategory={activeTab} // 버튼 누르면 해당 카테고리 툴박스/플라이아웃 표시
+              activeCategory={activeTab} // 버튼 누르면 해당 카테고리 팔레트 표시
             />
           </div>
 
@@ -165,6 +166,7 @@ export default function MainPage() {
     </div>
   );
 }
+
 
 
 
