@@ -7,6 +7,8 @@ export default function InputField({
   onChange,
   disabled = false,
   className = "",
+  onKeyDown,           
+  ...rest              
 }) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -24,8 +26,9 @@ export default function InputField({
         className={`w-full px-3 py-2 border rounded-md text-sm transition-all placeholder-gray-400 mb-4
           ${disabled ? "bg-gray-100 text-gray-500" : "bg-white"}
           focus:outline-none focus:ring-2 focus:ring-black ${className}`}
+        {...rest}
       />
-
     </div>
   );
 }
+
