@@ -1,0 +1,44 @@
+/* src/blockly/blockly.css */
+
+/* 작업영역 배경 그리드 색 */
+.blocklyMainBackground {
+  stroke: #eaeaea !important;
+}
+
+/* 플라이아웃(왼쪽 블록 목록) 배경 */
+.blocklyFlyoutBackground {
+  fill: #efefef !important;
+}
+
+/* 플라이아웃 그림자/경계 */
+.blocklyFlyout {
+  box-shadow: inset -1px 0 0 #dedede;
+}
+
+/* 줌/휴지통 버튼 위치 조금 올리기 */
+.blocklyZoom {
+  right: 12px !important;
+  bottom: 60px !important;
+}
+.blocklyTrash {
+  right: 12px !important;
+  bottom: 12px !important;
+}
+
+/* 블록 인풋 필드(숫자/드롭다운) 가독성 */
+.blocklyHtmlInput {
+  padding: 2px 4px !important;
+  font-size: 12px !important;
+}
+
+/* 드롭다운 버튼 둥글게 */
+.blocklyDropdownMenu .goog-menuitem {
+  border-radius: 6px;
+}
+
+/* 선택 강조 */
+.blocklySelected > path.blocklyPath {
+  filter: brightness(1.03);
+  stroke: #ffb703 !important;
+  stroke-width: 2px;
+}
