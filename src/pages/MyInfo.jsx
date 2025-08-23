@@ -70,7 +70,7 @@ export default function MyInfo() {
             <span>●●●●●●</span>
           </div>
         </div>
-        <div className="mt-30 flex gap-4">
+        <div className="mt-6 flex gap-4">
           <button
             onClick={handleDelete}
             className="bg-red-300 text-white px-5 py-2 rounded-full"
@@ -88,6 +88,7 @@ export default function MyInfo() {
     </div>
   );
 }
+
 
 
 
