@@ -13,30 +13,26 @@
   box-shadow: inset -1px 0 0 #dedede;
 }
 
-/* 블록 입력 필드 가독성 */
+/* 팔레트 아이템 겹침 방지: 캔버스 변형 초기화 */
+.blocklyFlyout .blocklyBlockCanvas {
+  transform: translate(0, 0) !important;
+}
+
+/* 드래그 마커/선택 강조 */
+.blocklySelected > path.blocklyPath {
+  stroke: #ffb703 !important;
+  stroke-width: 2px !important;
+}
+
+/* 입력 필드 가독성 */
 .blocklyHtmlInput {
   padding: 2px 4px !important;
   font-size: 12px !important;
 }
 
-/* 드롭다운 메뉴 둥글게 */
-.blocklyDropdownMenu .goog-menuitem {
-  border-radius: 6px;
-}
-
-/* 선택 강조 */
-.blocklySelected > path.blocklyPath {
-  filter: brightness(1.03);
-  stroke: #ffb703 !important;
-  stroke-width: 2px;
-}
-
-/* 팔레트 아이템 간격 보정(겹침 방지) */
-.blocklyFlyout .blocklyBlockCanvas > g {
-  transform: translateY(0px); /* 렌더러 겹침 이슈 방지용 기본값 */
-}
-
 /* 툴 버튼 위치 */
 .blocklyZoom { right: 12px !important; bottom: 60px !important; }
 .blocklyTrash { right: 12px !important; bottom: 12px !important; }
+
+
 
