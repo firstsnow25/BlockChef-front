@@ -89,10 +89,3 @@ export default function MyInfo() {
   );
 }
 
-
-
-
-
-
-
-
