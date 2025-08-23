@@ -2,7 +2,7 @@
 import * as Blockly from 'blockly/core';
 import 'blockly/blocks';
 
-/** ================= 재료(값) 블록 ================= **/
+/** =========== 재료(Value) =========== */
 Blockly.Blocks['ingredient_value'] = {
   init() {
     this.appendDummyInput()
@@ -31,12 +31,12 @@ Blockly.Blocks['ingredient_value'] = {
         ['컵', 'CUP'],
       ]), 'UNIT');
     this.setOutput(true, null);
-    this.setColour(40); // 초록
+    this.setColour(40);
     this.setTooltip('재료를 값으로 반환');
   },
 };
 
-/** ================= 동작(Statement) 블록 with Mutator ================= **/
+/** =========== (확장 방식) 뮤테이터 믹스인 =========== */
 const ACTION_MUTATOR_MIXIN = {
   ingCount_: 1,
   mutationToDom() {
@@ -68,8 +68,13 @@ const ACTION_MUTATOR_MIXIN = {
       item = item.nextConnection && item.nextConnection.targetBlock();
     }
     this.updateShape_(connections.length);
+    // 직접 재연결
     for (let i = 0; i < this.ingCount_; i++) {
-      Blockly.Mutator.reconnect(connections[i], this, 'ING' + i);
+      const targetInput = this.getInput('ING' + i);
+      const toConnect = connections[i];
+      if (targetInput && toConnect) {
+        targetInput.connection.connect(toConnect);
+      }
     }
   },
   saveConnections(container) {
@@ -91,6 +96,15 @@ const ACTION_MUTATOR_MIXIN = {
   },
 };
 
+/** 뮤테이터 등록 (blockly@12 방식) */
+Blockly.Extensions.registerMutator(
+  'action_mutator',
+  ACTION_MUTATOR_MIXIN,
+  undefined, // helperFn (필요 없으면 undefined)
+  ['action_ingredient_item'] // sub-block 타입들
+);
+
+/** =========== 동작(Statement): 조리 =========== */
 Blockly.Blocks['action_cook'] = {
   init() {
     this.appendDummyInput()
@@ -107,16 +121,40 @@ Blockly.Blocks['action_cook'] = {
 
     this.setPreviousStatement(true);
     this.setNextStatement(true);
-    this.setColour(10); // 주황/빨강 계열
+    this.setColour(10);
     this.setTooltip('여러 재료를 받아 조리 동작 수행');
-    this.setMutator(new Blockly.Mutator(['action_ingredient_item']));
-    Object.assign(this, ACTION_MUTATOR_MIXIN);
+    this.mixin(ACTION_MUTATOR_MIXIN);       // 믹스인 적용
+    this.setMutator('action_mutator');      // 등록한 뮤테이터 이름으로 연결
   },
 };
 
+/** =========== 동작(Statement): 섞기 =========== */
+Blockly.Blocks['action_mix'] = {
+  init() {
+    this.appendDummyInput()
+      .appendField('섞는다')
+      .appendField(new Blockly.FieldDropdown([
+        ['약하게', 'LOW'],
+        ['보통', 'MEDIUM'],
+        ['강하게', 'HIGH'],
+      ]), 'SPEED')
+      .appendField('시간(초)')
+      .appendField(new Blockly.FieldNumber(10, 0, 3600, 1), 'SECONDS');
+    this.appendValueInput('ING0').appendField('재료');
+
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+    this.setTooltip('여러 재료를 지정 세기로 섞습니다.');
+    this.mixin(ACTION_MUTATOR_MIXIN);
+    this.setMutator('action_mutator');
+  },
+};
+
+/** =========== 뮤테이터 UI용 블록 =========== */
 Blockly.Blocks['action_ingredients_container'] = {
   init() {
-    this.appendDummyInput().appendField('재료 목록');
+    this.appendDummyInput().appendField('재료 입력 목록');
     this.appendStatementInput('STACK');
     this.setColour(10);
     this.contextMenu = false;
@@ -132,7 +170,7 @@ Blockly.Blocks['action_ingredient_item'] = {
   },
 };
 
-/** ================= 흐름(제어) 블록 ================= **/
+/** =========== 흐름(제어) =========== */
 Blockly.Blocks['flow_repeat'] = {
   init() {
     this.appendDummyInput()
@@ -142,20 +180,35 @@ Blockly.Blocks['flow_repeat'] = {
     this.appendStatementInput('DO').appendField('수행');
     this.setPreviousStatement(true);
     this.setNextStatement(true);
-    this.setColour(210); // 파랑
+    this.setColour(210);
     this.setTooltip('지정 횟수만큼 수행');
   },
 };
 
-Blockly.Blocks['flow_if_else'] = {
+Blockly.Blocks['flow_until'] = {
   init() {
-    this.appendValueInput('COND').appendField('만약 (조건)');
-    this.appendStatementInput('DO').appendField('이면');
-    this.appendStatementInput('ELSE').appendField('아니면');
+    this.appendValueInput('COND').appendField('다음까지 반복 (조건)');
+    this.appendStatementInput('DO').appendField('수행');
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(210);
-    this.setTooltip('조건 분기');
+    this.setTooltip('조건이 참이 될 때까지 반복');
   },
 };
+
+Blockly.Blocks['cond_property'] = {
+  init() {
+    this.appendDummyInput()
+      .appendField('조건:')
+      .appendField(new Blockly.FieldDropdown([
+        ['부드러워짐', 'TENDER'],
+        ['갈색이 됨', 'BROWNED'],
+        ['끓기 시작', 'BOILING'],
+      ]), 'COND');
+    this.setOutput(true, 'Boolean');
+    this.setColour(200);
+    this.setTooltip('상태 조건(Boolean)');
+  },
+};
+
 
