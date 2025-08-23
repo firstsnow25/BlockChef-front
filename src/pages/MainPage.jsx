@@ -116,7 +116,9 @@ export default function MainPage() {
               className="text-orange-400 cursor-pointer"
               title="전체 삭제"
               onClick={() => {
-                if (confirm("현재 레시피 블록을 모두 지울까요?")) blocklyRef.current?.clear();
+                if (window.confirm("현재 레시피 블록을 모두 지울까요?")) {
+                  blocklyRef.current?.clear();
+                }
               }}
             />
             <Save
@@ -163,6 +165,7 @@ export default function MainPage() {
     </div>
   );
 }
+
 
 
 
