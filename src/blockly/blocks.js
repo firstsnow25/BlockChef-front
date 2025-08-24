@@ -1,5 +1,5 @@
 // src/blockly/blocks.js
-import * as Blockly from "blockly/core"; // ✅ 네임스페이스 임포트만 사용 (named import 금지)
+import * as Blockly from "blockly"; // ✅ 네임스페이스 임포트만 사용 (named import 금지)
 
 /* ───────── 재료 이름(value) 예시 ───────── */
 const ING_NAMES = ["감자", "당근", "양파", "달걀", "소금", "물", "라면사리", "라면스프", "대파", "고추"];
@@ -179,7 +179,7 @@ Blockly.Blocks["combine_block"] = {
     this.setNextStatement(true);
     this.itemCount_ = 2; // 기본 2개
     this.updateShape_();
-    this.setMutator(new Blockly.Mutator(["combine_item_block"])); // ✅ namespace로 호출
+    this.setMutator(new Blockly.Mutator(["combine_item_block"])); // ✅ 네임스페이스 통해 사용
     this.setTooltip("여러 재료/중간 결과를 하나로 합칩니다.");
   },
   updateShape_() {

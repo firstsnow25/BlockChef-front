@@ -1,6 +1,6 @@
 // src/components/BlocklyArea.jsx
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import * as Blockly from "blockly/core";
+import * as Blockly from "blockly"; // ✅ core 대신 blockly
 import "blockly/blocks";
 import "blockly/msg/ko";
 
@@ -277,6 +277,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
+
 
 
 
