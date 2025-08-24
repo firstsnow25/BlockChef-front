@@ -2,7 +2,7 @@
 
 export const CATEGORY_ORDER = [
   "재료",
-  "조리단계",
+  "조리",
   "조리값",
   "흐름",
 ];
@@ -27,8 +27,8 @@ export const CATALOG = {
     })),
   ],
 
-  /** 2) 조리단계(Statement) */
-  "조리단계": [
+  /** 2) 조리(Statement) */
+  "조리": [
     // 시간 있는 단계
     ...["mix","steam","fry","boil","grill","deepfry"].map((k) => ({
       type: `${k}_stmt`, template: `${k}_block`, fields: { TIME: 5, UNIT: "분" },
@@ -62,6 +62,7 @@ export const CATALOG = {
     { type: "finish", template: "finish_block", fields: {} },
   ],
 };
+
 
 
 
