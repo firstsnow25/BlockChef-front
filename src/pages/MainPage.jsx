@@ -1,5 +1,5 @@
 // src/pages/MainPage.jsx
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LoginButton from "../components/LoginButton";
 import TagInput from "../components/TagInput";
@@ -10,42 +10,37 @@ import BlocklyArea from "../components/BlocklyArea";
 import { CATEGORY_ORDER } from "../blockly/catalog";
 
 export default function MainPage() {
-  // 기본 카테고리
+  // 왼쪽 카테고리 버튼(팔레트 전환)
   const [activeTab, setActiveTab] = useState(CATEGORY_ORDER[0]);
 
   // 저장 팝업/메타
   const [showSavePopup, setShowSavePopup] = useState(false);
-  const [recipeId, setRecipeId] = useState(null);
+  const [recipeId, setRecipeId] = useState(null);        // 기존 레시피 수정용 id (_id)
   const [recipeTitle, setRecipeTitle] = useState("");
   const [recipeDescription, setRecipeDescription] = useState("");
   const [tags, setTags] = useState([]);
-  const [recipeXml, setRecipeXml] = useState("");
+  const [recipeXml, setRecipeXml] = useState("");        // 현재 워크스페이스 XML
   const [titleError, setTitleError] = useState(false);
   const [tagsError, setTagsError] = useState(false);
 
-  // 변경 감지
-  const lastSavedXmlRef = useRef("");
+  // ✅ 블럭이 1개 이상 있으면 true (저장 여부와 무관)
   const [isDirty, setIsDirty] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
   const blocklyRef = useRef(null);
 
-  // 상세 진입 시 로드
+  // 상세 진입 시(id 존재) 레시피 로드
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
     if (id) loadRecipeDetail(id);
-    if (!id) {
-      lastSavedXmlRef.current = "";
-      setIsDirty(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
   const loadRecipeDetail = async (id) => {
     try {
-      const data = await fetchRecipeDetail(id); // { _id, title, description, xml, tags }
+      // api/recipeApi.js 에서 형식 정규화해서 반환: { _id, title, description, xml, tags }
+      const data = await fetchRecipeDetail(id);
       setRecipeId(data._id || null);
       setRecipeTitle(data.title || "");
       setRecipeDescription(data.description || "");
@@ -53,8 +48,15 @@ export default function MainPage() {
       const xml = data.xml || "";
       setRecipeXml(xml);
       blocklyRef.current?.loadXml(xml);
-      lastSavedXmlRef.current = xml;
-      setIsDirty(false);
+
+      // 불러온 직후엔 작업영역 상태 기준으로 dirty 계산 (일단 xml에 블럭 있으면 true)
+      try {
+        const doc = new DOMParser().parseFromString(xml || "<xml/>", "text/xml");
+        const hasBlocks = doc.getElementsByTagName("block").length > 0;
+        setIsDirty(hasBlocks);
+      } catch {
+        setIsDirty(false);
+      }
     } catch (err) {
       console.error("레시피 불러오기 실패:", err);
       console.error("서버 응답 바디:", err?.response?.data);
@@ -62,108 +64,90 @@ export default function MainPage() {
     }
   };
 
+  // ✅ XML 변경 시: 블럭이 하나라도 있으면 무조건 dirty = true
+  const handleXmlChange = (xml) => {
+    setRecipeXml(xml);
+    try {
+      const doc = new DOMParser().parseFromString(xml || "<xml/>", "text/xml");
+      const hasBlocks = doc.getElementsByTagName("block").length > 0;
+      setIsDirty(hasBlocks);
+    } catch {
+      setIsDirty(false);
+    }
+  };
+
+  // 새로고침/탭 닫기 방지
+  useEffect(() => {
+    const beforeUnload = (e) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      // Chrome requires returnValue to be set
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [isDirty]);
+
+  // 라우팅 이동 전에 확인 (내부 네비게이션 버튼 등에서 호출)
+  const confirmLeaveIfDirty = async (to) => {
+    if (!isDirty) {
+      navigate(to);
+      return;
+    }
+    const ok = window.confirm(
+      "현재 작업 중인 블럭이 있습니다. 저장하지 않고 이동하면 작업이 초기화됩니다.\n정말 이동하시겠습니까?"
+    );
+    if (ok) navigate(to);
+  };
+
   const handleSave = async () => {
+    // 간단 검증
     setTitleError(!recipeTitle.trim());
     setTagsError(tags.length === 0);
     if (!recipeTitle.trim() || tags.length === 0) return;
 
     try {
+      // 워크스페이스에서 최신 XML 추출 (없으면 스냅샷 사용)
       const xml = blocklyRef.current?.getXml() || recipeXml;
       const cleanedTags = tags.map((tag) => tag.replace(/^#/, ""));
+
       await saveRecipe({
-        _id: recipeId,
+        _id: recipeId,                      // 있으면 수정, 없으면 신규
         title: recipeTitle,
         description: recipeDescription,
         tags: cleanedTags,
-        xml,
+        xml,                                // api 레이어에서 blockStructure로 매핑됨
       });
-      lastSavedXmlRef.current = xml;
-      setIsDirty(false);
+
       alert("레시피가 저장되었습니다!");
       setShowSavePopup(false);
+      // 저장 이후에도 “블럭이 존재하면” 여전히 dirty 기준은 true가 될 수 있음
+      // 여기서는 저장 직후에도 블럭 존재 여부 기준을 유지
+      try {
+        const doc = new DOMParser().parseFromString(xml || "<xml/>", "text/xml");
+        const hasBlocks = doc.getElementsByTagName("block").length > 0;
+        setIsDirty(hasBlocks);
+      } catch {
+        setIsDirty(false);
+      }
     } catch (err) {
       console.error("저장 실패:", err);
+      console.error("서버 응답 바디:", err?.response?.data);
       alert("레시피 저장 중 오류가 발생했습니다.");
     }
   };
 
-  const handleXmlChange = (xml) => {
-    setRecipeXml(xml);
-    setIsDirty(xml !== lastSavedXmlRef.current);
-  };
-
-  // 새로고침/창닫기 가드
-  useEffect(() => {
-    const handler = (e) => {
-      if (!isDirty) return;
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty]);
-
-  // 내부 라우팅/뒤로가기 가드
-  useEffect(() => {
-    const onDocumentClick = (e) => {
-      if (!isDirty) return;
-      const anchor = e.target.closest?.("a[href]");
-      if (!anchor) return;
-      const href = anchor.getAttribute("href");
-      if (!href) return;
-      if (/^https?:\/\//i.test(href)) return; // 외부 링크는 패스
-
-      e.preventDefault();
-      const ok = window.confirm(
-        "이 페이지를 벗어나면 현재 구성 중인 블록이 저장되지 않을 수 있어요. 이동하시겠습니까?"
-      );
-      if (ok) navigate(href);
-    };
-
-    const onPopState = () => {
-      if (!isDirty) return;
-      const ok = window.confirm(
-        "이 페이지를 벗어나면 현재 구성 중인 블록이 저장되지 않을 수 있어요. 이동하시겠습니까?"
-      );
-      if (!ok) {
-        // 🔧 ESLint 회피: 전역 history 대신 window.history 사용
-        window.history.go(1);
-        // 또는 navigate(1);
-      }
-    };
-
-    document.addEventListener("click", onDocumentClick, true);
-    window.addEventListener("popstate", onPopState);
-    return () => {
-      document.removeEventListener("click", onDocumentClick, true);
-      window.removeEventListener("popstate", onPopState);
-    };
-  }, [isDirty, navigate]);
-
-  // 휴지통 왼쪽 세로 버튼 스택
-  const buttonStackStyle = useMemo(
-    () => ({
-      position: "absolute",
-      right: "70px",
-      bottom: "12px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      alignItems: "center",
-      zIndex: 3,
-    }),
-    []
-  );
-
-  const iconButtonClass =
-    "p-2 rounded-lg bg-white shadow border border-gray-200 hover:shadow-md hover:border-gray-300 cursor-pointer";
-
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      {/* TopNavbar의 메뉴로 이동할 때도 dirty 확인을 거치고 싶다면
+          TopNavbar에 콜백을 내려보내서 사용하면 됩니다.
+          여기서는 기본 컴포넌트 그대로 사용하고,
+          사용자분이 좌측 버튼이나 자체 내비를 누르기 전에 저장 안내를 받도록
+          별도의 '나의 레시피로' 같은 버튼을 추가하고 confirmLeaveIfDirty를 호출해도 됩니다. */}
       <TopNavbar />
 
       <div className="flex flex-row flex-1">
-        {/* 왼쪽 카테고리 버튼 */}
+        {/* ⬅️ 카테고리 버튼 (팔레트 전환 전용) */}
         <div className="w-[120px] border-r border-gray-200 p-2">
           {CATEGORY_ORDER.map((tab) => (
             <LoginButton
@@ -173,46 +157,56 @@ export default function MainPage() {
               className={`w-full my-1 ${activeTab === tab ? "bg-orange-400" : ""}`}
             />
           ))}
+
+          {/* 예시: 내부 네비를 dirty 확인과 함께 이동시키고 싶다면 */}
+          <div className="mt-6">
+            <LoginButton
+              text="나의 레시피"
+              onClick={() => confirmLeaveIfDirty("/my")}
+              className="w-full my-1"
+            />
+          </div>
         </div>
 
-        {/* Blockly 영역 */}
+        {/* ➡️ Blockly 워크스페이스 (팔레트 + 작업영역) */}
         <div className="flex-1 bg-gray-100 relative">
           <div className="absolute inset-4 border-2 border-gray-300 bg-white rounded-xl overflow-hidden">
             <BlocklyArea
               ref={blocklyRef}
               initialXml={recipeXml}
-              onXmlChange={handleXmlChange}
+              onXmlChange={handleXmlChange}     // ✅ 블럭 존재 여부로 dirty 관리
               activeCategory={activeTab}
-              horizontalScroll={false}
             />
           </div>
 
-          {/* 휴지통 왼쪽 버튼들: Undo / Redo / Delete / Save */}
-          <div style={buttonStackStyle}>
+          {/* 우하단 툴 버튼 (디자인/아이콘은 기존 그대로, 좌우 배치 유지) */}
+          <div className="absolute bottom-[20px] right-[20px] flex gap-4 items-center">
             <ChevronLeft
-              className={`${iconButtonClass} text-orange-400`}
+              className="text-orange-400 cursor-pointer"
               title="되돌리기"
               onClick={() => blocklyRef.current?.undo()}
             />
             <ChevronRight
-              className={`${iconButtonClass} text-orange-400`}
+              className="text-orange-400 cursor-pointer"
               title="다시하기"
               onClick={() => blocklyRef.current?.redo()}
             />
             <Trash2
-              className={`${iconButtonClass} text-orange-400`}
+              className="text-orange-400 cursor-pointer"
               title="전체 삭제"
               onClick={() => {
                 if (window.confirm("현재 레시피 블록을 모두 지울까요?")) {
                   blocklyRef.current?.clear();
-                  setIsDirty(true);
+                  // 모두 지우면 dirty도 false가 되도록 동기화
+                  setRecipeXml("");
+                  setIsDirty(false);
                 }
               }}
             />
             <Save
-              className={`${iconButtonClass} text-orange-400`}
-              title="저장"
+              className="text-orange-400 cursor-pointer"
               onClick={() => setShowSavePopup(true)}
+              title="저장"
             />
           </div>
         </div>
@@ -230,9 +224,7 @@ export default function MainPage() {
               onChange={(e) => setRecipeTitle(e.target.value)}
               className="w-full border border-gray-300 px-3 py-2 rounded mb-1"
             />
-            {titleError && (
-              <p className="text-red-500 text-sm mb-2">제목을 입력해주세요.</p>
-            )}
+            {titleError && <p className="text-red-500 text-sm mb-2">제목을 입력해주세요.</p>}
             <textarea
               placeholder="설명"
               value={recipeDescription}
@@ -240,9 +232,7 @@ export default function MainPage() {
               className="w-full border border-gray-300 px-3 py-2 rounded mb-2 resize-none"
             />
             <TagInput tags={tags} setTags={setTags} />
-            {tagsError && (
-              <p className="text-red-500 text-sm mt-2">태그를 하나 이상 입력해주세요.</p>
-            )}
+            {tagsError && <p className="text-red-500 text-sm mt-2">태그를 하나 이상 입력해주세요.</p>}
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={() => setShowSavePopup(false)} className="text-gray-500">
                 취소
@@ -257,6 +247,7 @@ export default function MainPage() {
     </div>
   );
 }
+
 
 
 
