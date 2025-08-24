@@ -1,326 +1,219 @@
 // src/blockly/blocks.js
 import * as Blockly from "blockly/core";
-import "blockly/blocks";
-import "blockly/msg/ko";
 
-/**
- * BlockChef 커스텀 블록 모음 (HTML 데모 정의 이식)
- * - v12 대응: Mutator 클래스를 직접 import 하지 않고 registerMutator 사용
- * - 스타일: ingredient_blocks / action_blocks / flow_blocks (BlocklyArea의 BlockChefTheme와 매칭)
- */
+/** 공통 유틸: 더미 인풋 라벨 */
+function addLabel(block, text) {
+  block.appendDummyInput().appendField(text);
+}
 
-/* =========================
- * 공통 상수
- * ========================= */
-const INGREDIENT_NAMES = [
-  "감자", "당근", "양파", "달걀", "소금", "물", "라면사리", "라면스프", "대파", "고추",
-];
-
-const ACTION_LABELS = {
-  slice: "썰기",
-  put: "넣기",
-  mix: "섞기",
-  steam: "찌기",
-  fry: "볶기",
-  boil: "끓이기",
-  grill: "굽기",
-  deepfry: "튀기기",
-  wait: "기다리기",
-  peel: "껍질 벗기기",
-  crack: "깨기",
-  remove_seed: "씨 제거하기",
-};
-
-const ACTIONS_WITH_TIME = ["mix", "steam", "fry", "boil", "grill", "deepfry"];
-const ACTIONS_WITHOUT_TIME = ["slice", "put", "peel", "crack", "remove_seed"];
-
-/* =========================
- * 시작/완료
- * ========================= */
-Blockly.Blocks["start_block"] = {
-  init() {
-    this.appendDummyInput().appendField("요리 시작");
-    this.setNextStatement(true);
-    this.setStyle("flow_blocks");
-    this.setTooltip("요리를 시작합니다.");
-  },
-};
-
-Blockly.Blocks["finish_block"] = {
-  init() {
-    this.appendDummyInput().appendField("요리 완료");
-    this.setPreviousStatement(true);
-    this.setStyle("flow_blocks");
-    this.setTooltip("요리를 완료합니다.");
-  },
-};
-
-/* =========================
- * 재료: 이름 블록 + 구성 블록
- *  - ingredient_name_감자 ... (값 블록)
- *  - ingredient_block: (재료 이름 값) + 양 + 단위 → 값 블록
- * ========================= */
-INGREDIENT_NAMES.forEach((name) => {
-  Blockly.Blocks[`ingredient_name_${name}`] = {
+/** ─────────────────────────────────────────────────────────
+ *  재료 이름 (value) – 예시로 몇 개만. 계속 추가 가능
+ * ───────────────────────────────────────────────────────── */
+const ING_NAMES = ["감자", "당근", "양파", "달걀", "소금", "물", "라면사리", "라면스프", "대파", "고추"];
+ING_NAMES.forEach((name) => {
+  const type = `ingredient_name_${name}`;
+  Blockly.Blocks[type] = {
     init() {
-      this.appendDummyInput().appendField(name);
-      this.setOutput(true, null);
       this.setStyle("ingredient_blocks");
-      this.setTooltip("재료 이름");
+      this.setOutput(true, null);
+      addLabel(this, name);
+      this.setTooltip(`${name}`);
+      this.setHelpUrl("");
     },
   };
 });
 
+/** 재료 블록 (value) – 이름(value) + 양(number) + 단위(dropdown) */
 Blockly.Blocks["ingredient_block"] = {
   init() {
+    this.setStyle("ingredient_blocks");
+    this.setOutput(true, null);
     this.appendValueInput("NAME").appendField("재료");
     this.appendDummyInput()
       .appendField("양")
-      .appendField(new Blockly.FieldNumber(1, 1), "QUANTITY")
+      .appendField(new Blockly.FieldNumber(1, 0, 9999, 1), "QUANTITY")
       .appendField(
         new Blockly.FieldDropdown([
           ["개", "개"],
+          ["g", "g"],
+          ["ml", "ml"],
           ["컵", "컵"],
-          ["리터", "리터"],
-          ["그램", "그램"],
+          ["큰술", "큰술"],
+          ["작은술", "작은술"],
         ]),
         "UNIT"
       );
-    this.setOutput(true, null);
-    this.setStyle("ingredient_blocks");
-    this.setTooltip("재료를 구성합니다.");
+    this.setTooltip("재료 구성");
+    this.setHelpUrl("");
   },
 };
 
-/* =========================
- * 동작: 단계(Statement) + 값(Value) 버전
- *  - with time: *_block / *_value_block (시간 + 단위)
- *  - without time: *_block / *_value_block
- * ========================= */
+/** ─────────────────────────────────────────────────────────
+ *  조리 단계 (statement) – 시간 있는/없는 버전 몇 개 예시
+ * ───────────────────────────────────────────────────────── */
+function mkTimedAction(type, label) {
+  Blockly.Blocks[type] = {
+    init() {
+      this.setStyle("action_blocks");
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.appendDummyInput()
+        .appendField(label)
+        .appendField(new Blockly.FieldNumber(5, 0, 1000, 1), "TIME")
+        .appendField(
+          new Blockly.FieldDropdown([
+            ["분", "분"],
+            ["초", "초"],
+          ]),
+          "UNIT"
+        );
+      this.setTooltip(label);
+    },
+  };
+}
+function mkAction(type, label) {
+  Blockly.Blocks[type] = {
+    init() {
+      this.setStyle("action_blocks");
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      addLabel(this, label);
+      this.setTooltip(label);
+    },
+  };
+}
 
-// 기다리기(시간만, statement)
-Blockly.Blocks["wait_block"] = {
+mkTimedAction("boil_block", "끓이기");
+mkTimedAction("fry_block", "볶기");
+mkTimedAction("grill_block", "굽기");
+mkTimedAction("deepfry_block", "튀기기");
+mkAction("slice_block", "썰기");
+mkAction("put_block", "넣기");
+mkAction("peel_block", "껍질 벗기기");
+mkAction("crack_block", "깨기");
+mkAction("remove_seed_block", "씨 제거");
+
+/** 조리 값 (value) – 같은 이름의 value 버전 */
+function mkTimedActionValue(type, label) {
+  Blockly.Blocks[type] = {
+    init() {
+      this.setStyle("action_blocks");
+      this.setOutput(true, null);
+      this.appendDummyInput()
+        .appendField(label)
+        .appendField(new Blockly.FieldNumber(5, 0, 1000, 1), "TIME")
+        .appendField(
+          new Blockly.FieldDropdown([
+            ["분", "분"],
+            ["초", "초"],
+          ]),
+          "UNIT"
+        );
+      this.setTooltip(`${label}(값)`);
+    },
+  };
+}
+function mkActionValue(type, label) {
+  Blockly.Blocks[type] = {
+    init() {
+      this.setStyle("action_blocks");
+      this.setOutput(true, null);
+      addLabel(this, label);
+      this.setTooltip(`${label}(값)`);
+    },
+  };
+}
+
+mkTimedActionValue("boil_value_block", "끓이기");
+mkTimedActionValue("fry_value_block", "볶기");
+mkTimedActionValue("grill_value_block", "굽기");
+mkTimedActionValue("deepfry_value_block", "튀기기");
+mkActionValue("slice_value_block", "썰기");
+mkActionValue("put_value_block", "넣기");
+mkActionValue("peel_value_block", "껍질 벗기기");
+mkActionValue("crack_value_block", "깨기");
+mkActionValue("remove_seed_value_block", "씨 제거");
+
+/** 흐름 제어 */
+Blockly.Blocks["start_block"] = {
   init() {
-    this.appendDummyInput()
-      .appendField(ACTION_LABELS.wait)
-      .appendField("시간")
-      .appendField(new Blockly.FieldNumber(5, 1), "TIME")
-      .appendField(
-        new Blockly.FieldDropdown([
-          ["초", "초"],
-          ["분", "분"],
-          ["시간", "시간"],
-        ]),
-        "UNIT"
-      );
-    this.setPreviousStatement(true);
+    this.setStyle("flow_blocks");
     this.setNextStatement(true);
-    this.setStyle("action_blocks");
-    this.setTooltip(`조리 방법: ${ACTION_LABELS.wait}`);
+    addLabel(this, "시작");
   },
 };
-
-// with time
-ACTIONS_WITH_TIME.forEach((key) => {
-  const label = ACTION_LABELS[key];
-
-  // statement 버전
-  Blockly.Blocks[`${key}_block`] = {
-    init() {
-      this.appendValueInput("ITEM").appendField(label);
-      this.appendDummyInput()
-        .appendField("시간")
-        .appendField(new Blockly.FieldNumber(5, 1), "TIME")
-        .appendField(
-          new Blockly.FieldDropdown([
-            ["초", "초"],
-            ["분", "분"],
-            ["시간", "시간"],
-          ]),
-          "UNIT"
-        );
-      this.setPreviousStatement(true);
-      this.setNextStatement(true);
-      this.setStyle("action_blocks");
-      this.setTooltip(`조리 방법: ${label}`);
-    },
-  };
-
-  // value 버전
-  Blockly.Blocks[`${key}_value_block`] = {
-    init() {
-      this.appendValueInput("ITEM").appendField(label);
-      this.appendDummyInput()
-        .appendField("시간")
-        .appendField(new Blockly.FieldNumber(5, 1), "TIME")
-        .appendField(
-          new Blockly.FieldDropdown([
-            ["초", "초"],
-            ["분", "분"],
-            ["시간", "시간"],
-          ]),
-          "UNIT"
-        );
-      this.setOutput(true, null);
-      this.setStyle("action_blocks");
-      this.setTooltip(`조리 방법 (값): ${label}`);
-    },
-  };
-});
-
-// without time
-ACTIONS_WITHOUT_TIME.forEach((key) => {
-  const label = ACTION_LABELS[key];
-
-  // statement
-  Blockly.Blocks[`${key}_block`] = {
-    init() {
-      this.appendValueInput("ITEM").appendField(label);
-      this.setPreviousStatement(true);
-      this.setNextStatement(true);
-      this.setStyle("action_blocks");
-      this.setTooltip(`조리 방법: ${label}`);
-    },
-  };
-
-  // value
-  Blockly.Blocks[`${key}_value_block`] = {
-    init() {
-      this.appendValueInput("ITEM").appendField(label);
-      this.setOutput(true, null);
-      this.setStyle("action_blocks");
-      this.setTooltip(`조리 방법 (값): ${label}`);
-    },
-  };
-});
-
-/* =========================
- * 흐름 제어
- *  - 반복 N회
- *  - 조건까지 반복
- *  - if (간단 입력형)
- *  - continue / break
- * ========================= */
 Blockly.Blocks["repeat_n_times"] = {
   init() {
-    this.appendDummyInput()
-      .appendField(new Blockly.FieldNumber(3, 1), "COUNT")
-      .appendField("번 반복");
-    this.appendStatementInput("DO").appendField("실행");
+    this.setStyle("flow_blocks");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
-    this.setStyle("flow_blocks");
-    this.setTooltip("지정한 횟수만큼 반복합니다.");
-  },
-};
-
-Blockly.Blocks["repeat_until_true"] = {
-  init() {
     this.appendDummyInput()
-      .appendField('조건 "')
-      .appendField(new Blockly.FieldTextInput("예: 면이 익을"), "CONDITION")
-      .appendField('" 될 때까지 반복');
+      .appendField("반복")
+      .appendField(new Blockly.FieldNumber(3, 1, 999, 1), "COUNT")
+      .appendField("회");
     this.appendStatementInput("DO").appendField("실행");
-    this.setPreviousStatement(true);
-    this.setNextStatement(true);
-    this.setStyle("flow_blocks");
-    this.setTooltip("사용자 조건에 도달할 때까지 반복합니다.");
   },
 };
-
 Blockly.Blocks["if_condition_block"] = {
   init() {
-    this.appendDummyInput()
-      .appendField('만약 "')
-      .appendField(new Blockly.FieldTextInput("예: 물이 끓으면"), "CONDITION")
-      .appendField('" 라면');
-    this.appendStatementInput("DO").appendField("실행");
+    this.setStyle("flow_blocks");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
-    this.setStyle("flow_blocks");
-    this.setTooltip("조건이 참일 경우 실행");
+    this.appendDummyInput()
+      .appendField("만약")
+      .appendField(new Blockly.FieldTextInput("예: 물이 끓으면"), "CONDITION");
+    this.appendStatementInput("DO").appendField("그러면");
   },
 };
-
+Blockly.Blocks["repeat_until_true"] = {
+  init() {
+    this.setStyle("flow_blocks");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.appendDummyInput()
+      .appendField("~까지 반복")
+      .appendField(new Blockly.FieldTextInput("예: 면이 익을"), "CONDITION");
+    this.appendStatementInput("DO").appendField("실행");
+  },
+};
 Blockly.Blocks["continue_block"] = {
   init() {
-    this.appendDummyInput().appendField("계속하기");
-    this.setPreviousStatement(true);
-    this.setNextStatement(true);
     this.setStyle("flow_blocks");
-    this.setTooltip("다음 단계로 계속합니다.");
+    this.setPreviousStatement(true);
+    addLabel(this, "다음으로");
   },
 };
-
 Blockly.Blocks["break_block"] = {
   init() {
-    this.appendDummyInput().appendField("종료하기");
-    this.setPreviousStatement(true);
     this.setStyle("flow_blocks");
-    this.setTooltip("흐름을 종료합니다.");
+    this.setPreviousStatement(true);
+    addLabel(this, "중단");
+  },
+};
+Blockly.Blocks["finish_block"] = {
+  init() {
+    this.setStyle("flow_blocks");
+    this.setPreviousStatement(true);
+    addLabel(this, "끝");
   },
 };
 
-/* =========================
- * 합치기 (뮤테이터, value 블록)
- *  - combine_block: 입력 ITEM* 가변
- * ========================= */
+/** ─────────────────────────────────────────────────────────
+ *  합치기(combine) – 뮤테이터로 value 입력을 동적 추가
+ *  - 저장/로드됨
+ *  - 팔레트에선 한 개로 보이고, 뮤테이터(+/-)로 재료/중간값을 여러 개 붙임
+ * ───────────────────────────────────────────────────────── */
 Blockly.Blocks["combine_block"] = {
   init() {
-    this.itemCount_ = 2; // 기본 2개
-    this.setOutput(true, null);
-    this.setStyle("action_blocks");
-    this.setMutator("combine_mutator");
+    this.setStyle("flow_blocks"); // 합치기의 색상은 flow 계열과 구분되게 원하면 combine_category 스타일로 바꿔도 됨
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.itemCount_ = 2; // 기본 2개 합치기
     this.updateShape_();
-    this.setTooltip("재료를 합칩니다.");
+    this.setMutator(new Blockly.Mutator(["combine_item_block"]));
+    this.setTooltip("여러 재료/중간 결과를 하나로 합칩니다.");
   },
-  mutationToDom() {
-    const container = document.createElement("mutation");
-    container.setAttribute("items", String(this.itemCount_));
-    return container;
-  },
-  domToMutation(xml) {
-    const n = parseInt(xml.getAttribute("items"), 10);
-    this.itemCount_ = Number.isFinite(n) ? n : 2;
-    this.updateShape_();
-  },
-  decompose(workspace) {
-    const container = workspace.newBlock("combine_mutator_container");
-    container.initSvg();
-    let conn = container.getInput("STACK").connection;
-    for (let i = 0; i < this.itemCount_; i++) {
-      const item = workspace.newBlock("combine_mutator_item");
-      item.initSvg();
-      conn.connect(item.previousConnection);
-      conn = item.nextConnection;
-    }
-    return container;
-  },
-  compose(container) {
-    const conns = [];
-    let item = container.getInputTargetBlock("STACK");
-    while (item) {
-      conns.push(item.valueConnection_);
-      item = item.nextConnection && item.nextConnection.targetBlock();
-    }
-    this.itemCount_ = conns.length || 1;
-    this.updateShape_();
-    for (let i = 0; i < this.itemCount_; i++) {
-      const input = this.getInput("ITEM" + i);
-      if (input && conns[i]) input.connection.connect(conns[i]);
-    }
-  },
-  saveConnections(container) {
-    let item = container.getInputTargetBlock("STACK");
-    let i = 0;
-    while (item) {
-      const input = this.getInput("ITEM" + i);
-      item.valueConnection_ =
-        input && input.connection && input.connection.targetConnection;
-      i++;
-      item = item.nextConnection && item.nextConnection.targetBlock();
-    }
-  },
+  /** 블록 모양을 itemCount_에 맞춰 갱신 */
   updateShape_() {
     // 기존 입력 제거
     let i = 0;
@@ -328,48 +221,84 @@ Blockly.Blocks["combine_block"] = {
       this.removeInput("ITEM" + i);
       i++;
     }
-    // 새 입력 추가
+    // 라벨 + 값 슬롯 추가
+    addLabel(this, "합치기");
     for (let k = 0; k < this.itemCount_; k++) {
-      this.appendValueInput("ITEM" + k).appendField(k === 0 ? "합치기 재료" : "재료 추가");
+      this.appendValueInput("ITEM" + k).appendField(k === 0 ? "재료/값" : "");
+    }
+  },
+  /** 뮤테이터 UI(컨테이너) */
+  decompose(workspace) {
+    const container = workspace.newBlock("combine_container_block");
+    container.initSvg();
+    let connection = container.getInput("STACK").connection;
+    for (let i = 0; i < this.itemCount_; i++) {
+      const item = workspace.newBlock("combine_item_block");
+      item.initSvg();
+      connection.connect(item.previousConnection);
+      connection = item.nextConnection;
+    }
+    return container;
+  },
+  /** 뮤테이터 compose → 실 블록 갱신 */
+  compose(containerBlock) {
+    let itemBlock = containerBlock.getInputTargetBlock("STACK");
+    const connections = [];
+    while (itemBlock) {
+      connections.push(itemBlock.valueConnection_);
+      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+    }
+    this.itemCount_ = connections.length || 1;
+    this.updateShape_();
+    // 기존 연결 복원
+    for (let i = 0; i < this.itemCount_; i++) {
+      if (connections[i]) {
+        this.getInput("ITEM" + i).connection.connect(connections[i]);
+      }
+    }
+  },
+  /** 저장용 */
+  saveExtraState() {
+    return { itemCount: this.itemCount_ };
+  },
+  /** 로드시 */
+  loadExtraState(state) {
+    this.itemCount_ = state?.itemCount ?? 2;
+    this.updateShape_();
+  },
+  /** 뮤테이터 UI에서 연결 유지 */
+  saveConnections(containerBlock) {
+    let itemBlock = containerBlock.getInputTargetBlock("STACK");
+    let i = 0;
+    while (itemBlock) {
+      const input = this.getInput("ITEM" + i);
+      itemBlock.valueConnection_ = input && input.connection.targetConnection;
+      i++;
+      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
     }
   },
 };
 
-// 뮤테이터 UI용 블록들
-Blockly.Blocks["combine_mutator_container"] = {
+/** 뮤테이터: 컨테이너/아이템 정의 */
+Blockly.Blocks["combine_container_block"] = {
   init() {
-    this.appendStatementInput("STACK").appendField("재료들");
-    this.setColour(300);
+    this.setStyle("flow_blocks");
+    addLabel(this, "합치기 항목");
+    this.appendStatementInput("STACK");
+    this.contextMenu = false;
   },
 };
-Blockly.Blocks["combine_mutator_item"] = {
+Blockly.Blocks["combine_item_block"] = {
   init() {
-    this.appendDummyInput().appendField("재료");
+    this.setStyle("flow_blocks");
+    addLabel(this, "항목");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
-    this.setColour(300);
+    this.contextMenu = false;
   },
 };
 
-// 뮤테이터 등록
-Blockly.Extensions.registerMutator(
-  "combine_mutator",
-  {
-    mutationToDom: Blockly.Blocks["combine_block"].mutationToDom,
-    domToMutation: Blockly.Blocks["combine_block"].domToMutation,
-    decompose: Blockly.Blocks["combine_block"].decompose,
-    compose: Blockly.Blocks["combine_block"].compose,
-    saveConnections: Blockly.Blocks["combine_block"].saveConnections,
-  },
-  null,
-  ["combine_mutator_item"]
-);
 
-/**
- * NOTE
- * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
- *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
- */
 
 
 
