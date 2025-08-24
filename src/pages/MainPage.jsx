@@ -7,68 +7,77 @@ import { ChevronLeft, ChevronRight, Trash2, Save } from "lucide-react";
 import TopNavbar from "../components/TopNavbar";
 import { saveRecipe, fetchRecipeDetail } from "../api/recipeApi";
 import BlocklyArea from "../components/BlocklyArea";
-// ✅ 버튼을 catalog의 순서와 동기화
 import { CATEGORY_ORDER } from "../blockly/catalog";
 
 export default function MainPage() {
-  // 기본 카테고리: catalog의 첫 항목
+  // 왼쪽 카테고리 버튼(팔레트 전환)
   const [activeTab, setActiveTab] = useState(CATEGORY_ORDER[0]);
 
+  // 저장 팝업/메타
   const [showSavePopup, setShowSavePopup] = useState(false);
+  const [recipeId, setRecipeId] = useState(null);        // ✅ 기존 레시피 수정용 id (_id)
   const [recipeTitle, setRecipeTitle] = useState("");
   const [recipeDescription, setRecipeDescription] = useState("");
   const [tags, setTags] = useState([]);
-  const [recipeXml, setRecipeXml] = useState("");
+  const [recipeXml, setRecipeXml] = useState("");        // 현재 워크스페이스 XML 스냅샷
   const [titleError, setTitleError] = useState(false);
   const [tagsError, setTagsError] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
-  const blocklyRef = useRef(null); // 워크스페이스 제어
+  const blocklyRef = useRef(null);
 
-  // 상세 진입 시 XML/메타 로드
+  // 상세 진입 시(id 존재) 레시피 로드
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const recipeId = params.get("id");
-    if (recipeId) loadRecipeDetail(recipeId);
+    const id = params.get("id");
+    if (id) loadRecipeDetail(id);
   }, [location.search]);
 
   const loadRecipeDetail = async (id) => {
     try {
+      // api/recipeApi.js 에서 형식 정규화해서 반환: { _id, title, description, xml, tags }
       const data = await fetchRecipeDetail(id);
-      setRecipeTitle(data.title);
-      setRecipeDescription(data.description);
-      setTags(data.tags.map((tag) => `#${tag}`));
+      setRecipeId(data._id || null);
+      setRecipeTitle(data.title || "");
+      setRecipeDescription(data.description || "");
+      setTags((data.tags || []).map((t) => `#${t}`));
       const xml = data.xml || "";
       setRecipeXml(xml);
-      // 워크스페이스가 이미 떠있다면 즉시 로드
       blocklyRef.current?.loadXml(xml);
     } catch (err) {
       console.error("레시피 불러오기 실패:", err);
+      console.error("서버 응답 바디:", err.response?.data);
+      alert("레시피 불러오기에 실패했습니다.");
     }
   };
 
   const handleSave = async () => {
-    if (!recipeTitle.trim()) setTitleError(true);
-    else setTitleError(false);
-    if (tags.length === 0) setTagsError(true);
-    else setTagsError(false);
+    // 간단 검증
+    setTitleError(!recipeTitle.trim());
+    setTagsError(tags.length === 0);
     if (!recipeTitle.trim() || tags.length === 0) return;
 
     try {
-      // ✅ 현재 워크스페이스 XML 우선 저장
+      // 워크스페이스에서 최신 XML 추출 (없으면 스냅샷 사용)
       const xml = blocklyRef.current?.getXml() || recipeXml;
       const cleanedTags = tags.map((tag) => tag.replace(/^#/, ""));
+
       await saveRecipe({
+        _id: recipeId,                      // ✅ 있으면 수정, 없으면 신규
         title: recipeTitle,
         description: recipeDescription,
         tags: cleanedTags,
-        xml,
+        xml,                                // api 레이어에서 blockStructure로 매핑됨
       });
+
       alert("레시피가 저장되었습니다!");
       setShowSavePopup(false);
+      // 원하면 저장 후 목록으로 이동:
+      // navigate("/my");
     } catch (err) {
       console.error("저장 실패:", err);
+      console.error("서버 응답 바디:", err.response?.data); // 400 원인 확인용
       alert("레시피 저장 중 오류가 발생했습니다.");
     }
   };
@@ -97,7 +106,7 @@ export default function MainPage() {
               ref={blocklyRef}
               initialXml={recipeXml}
               onXmlChange={(xml) => setRecipeXml(xml)}
-              activeCategory={activeTab} // 버튼 누르면 해당 카테고리 팔레트 표시
+              activeCategory={activeTab}
             />
           </div>
 
@@ -166,6 +175,7 @@ export default function MainPage() {
     </div>
   );
 }
+
 
 
 
