@@ -1,43 +1,39 @@
 /* src/blockly/blockly.css */
 
-/* ===== 작업영역 배경 (점선/그리드 위 보정) ===== */
+/* 작업영역 배경 그리드 */
 .blocklyMainBackground {
   stroke: #eaeaea !important;
 }
 
-/* ===== 기본 툴박스/플라이아웃은 사용하지 않음 (완전히 숨김) ===== */
-.blocklyToolboxDiv,
+/* 팔레트(플라이아웃) 배경/경계 */
+.blocklyFlyoutBackground {
+  fill: #efefef !important;
+}
 .blocklyFlyout {
-  display: none !important;
+  box-shadow: inset -1px 0 0 #dedede;
 }
 
-/* (참고) 예전 플라이아웃 전용 스타일은 더 이상 필요 없음
-.blocklyFlyoutBackground { fill: #efefef !important; }
-.blocklyFlyout { box-shadow: inset -1px 0 0 #dedede; }
-.blocklyFlyout .blocklyBlockCanvas { transform: translate(0,0) !important; }
-*/
+/* 팔레트 아이템 겹침 방지: 캔버스 변형 초기화 */
+.blocklyFlyout .blocklyBlockCanvas {
+  transform: translate(0, 0) !important;
+}
 
-/* ===== 선택 강조 (선택된 블록 외곽선) ===== */
+/* 드래그 마커/선택 강조 */
 .blocklySelected > path.blocklyPath {
   stroke: #ffb703 !important;
   stroke-width: 2px !important;
 }
 
-/* ===== 입력 필드 가독성 ===== */
+/* 입력 필드 가독성 */
 .blocklyHtmlInput {
   padding: 2px 4px !important;
   font-size: 12px !important;
 }
 
-/* ===== 우측 하단 컨트롤 위치 (줌/휴지통) ===== */
-.blocklyZoom  { right: 12px !important; bottom: 60px !important; }
+/* 툴 버튼 위치 */
+.blocklyZoom { right: 12px !important; bottom: 60px !important; }
 .blocklyTrash { right: 12px !important; bottom: 12px !important; }
 
-/* ===== Blockly 위젯/드롭다운이 항상 최상단에 오도록 ===== */
-.blocklyWidgetDiv,
-.blocklyDropDownDiv {
-  z-index: 100000 !important;
-}
 
 
 

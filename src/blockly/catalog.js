@@ -1,58 +1,73 @@
 // src/blockly/catalog.js
-// blocks.js에 정의된 타입 이름과 1:1로 "정확히" 맞춘다.
+
+export const CATEGORY_ORDER = [
+  "재료 이름",
+  "조리 단계",
+  "조리 값",
+  "흐름 제어",
+  "합치기",
+];
+
+/** 재료 이름들 */
+const ING_NAMES = [
+  "감자", "당근", "양파", "달걀", "소금", "물",
+  "라면사리", "라면스프", "대파", "고추",
+];
 
 export const CATALOG = {
-  // 1) 재료이름: blocks.js에서 동적 생성한 타입들 (ingredient_name_감자 등)
-  "재료이름": [
-    { type: "ingredient_name_감자", label: "감자" },
-    { type: "ingredient_name_당근", label: "당근" },
-    { type: "ingredient_name_양파", label: "양파" },
-    { type: "ingredient_name_달걀", label: "달걀" },
-    { type: "ingredient_name_소금", label: "소금" },
-    { type: "ingredient_name_물", label: "물" },
-    { type: "ingredient_name_라면사리", label: "라면사리" },
-    { type: "ingredient_name_라면스프", label: "라면스프" },
-    { type: "ingredient_name_대파", label: "대파" },
-    { type: "ingredient_name_고추", label: "고추" },
+  /** 1) 재료 이름 */
+  "재료 이름": [
+    // 재료 구성 블록(이름+양+단위)
+    { type: "ingredient", label: "재료", template: "ingredient_block", fields: { QUANTITY: 1, UNIT: "개" } },
+    // 개별 이름 블록들
+    ...ING_NAMES.map((n) => ({
+      type: `ing_name_${n}`,
+      label: n,
+      template: `ingredient_name_${n}`,
+      fields: {},
+    })),
   ],
 
-  // 2) 재료: 이름(value) + 양/단위가 있는 value 블록 (NAME 슬롯에 위 이름 블록을 꽂아 써)
-  "재료": [
-    { type: "ingredient_block", label: "재료(이름+양/단위)", fields: { QUANTITY: 1, UNIT: "개" } },
+  /** 2) 조리 단계(Statement) */
+  "조리 단계": [
+    // 시간 있는 단계
+    ...["mix","steam","fry","boil","grill","deepfry"].map((k) => ({
+      type: `${k}_stmt`, template: `${k}_block`, fields: { TIME: 5, UNIT: "분" },
+    })),
+    // 시간 없는 단계
+    ...["slice","put","peel","crack","remove_seed"].map((k) => ({
+      type: `${k}_stmt`, template: `${k}_block`, fields: {},
+    })),
+    // 기다리기(시간만)
+    { type: "wait_stmt", template: "wait_block", fields: { TIME: 5, UNIT: "분" } },
   ],
 
-  // 3) 조리단계: statement 블록 (시간 있는 동작 + 단순 동작)
-  "조리단계": [
-    { type: "boil_block", label: "끓이기", fields: { TIME: 5, UNIT: "분" } },
-    { type: "fry_block", label: "볶기", fields: { TIME: 5, UNIT: "분" } },
-    { type: "grill_block", label: "굽기", fields: { TIME: 10, UNIT: "분" } },
-    { type: "deepfry_block", label: "튀기기", fields: { TIME: 3, UNIT: "분" } },
-    { type: "slice_block", label: "썰기" },
-    { type: "put_block", label: "넣기" },
-    { type: "peel_block", label: "껍질 벗기기" },
-    { type: "crack_block", label: "깨기" },
-    { type: "remove_seed_block", label: "씨 제거" },
+  /** 3) 조리 값(Value) */
+  "조리 값": [
+    ...["mix","steam","fry","boil","grill","deepfry"].map((k) => ({
+      type: `${k}_val`, template: `${k}_value_block`, fields: { TIME: 5, UNIT: "분" },
+    })),
+    ...["slice","put","peel","crack","remove_seed"].map((k) => ({
+      type: `${k}_val`, template: `${k}_value_block`, fields: {},
+    })),
   ],
 
-  // 4) 흐름: statement 블록
-  "흐름": [
-    { type: "start_block", label: "시작" },
-    { type: "repeat_n_times", label: "반복", fields: { COUNT: 3 } },
-    { type: "if_condition_block", label: "만약", fields: { CONDITION: "예: 물이 끓으면" } },
-    { type: "repeat_until_true", label: "~까지 반복", fields: { CONDITION: "예: 면이 익을" } },
-    { type: "continue_block", label: "다음으로" },
-    { type: "break_block", label: "중단" },
-    { type: "finish_block", label: "끝" },
+  /** 4) 흐름 제어 */
+  "흐름 제어": [
+    { type: "start", template: "start_block", fields: {} },
+    { type: "repeat_n", template: "repeat_n_times", fields: { COUNT: 3 } },
+    { type: "repeat_until", template: "repeat_until_true", fields: { CONDITION: "예: 면이 익을" } },
+    { type: "if_simple", template: "if_condition_block", fields: { CONDITION: "예: 물이 끓으면" } },
+    { type: "continue", template: "continue_block", fields: {} },
+    { type: "break", template: "break_block", fields: {} },
+    { type: "finish", template: "finish_block", fields: {} },
   ],
 
-  // 5) 합치기: 뮤테이터 적용된 statement 블록
+  /** 5) 합치기 */
   "합치기": [
-    { type: "combine_block", label: "합치기" }, // 버튼 눌러 입력 수 +/-
+    { type: "combine", template: "combine_block", fields: {} },
   ],
 };
-
-// 버튼 순서
-export const CATEGORY_ORDER = ["재료이름", "재료", "조리단계", "흐름", "합치기"];
 
 
 
