@@ -1,10 +1,10 @@
 // src/blockly/catalog.js
 
 export const CATEGORY_ORDER = [
-  "재료 이름",
-  "조리 단계",
-  "조리 값",
-  "흐름 제어",
+  "재료",
+  "조리단계",
+  "조리값",
+  "흐름",
 ];
 
 /** 재료 이름들 */
@@ -14,8 +14,8 @@ const ING_NAMES = [
 ];
 
 export const CATALOG = {
-  /** 1) 재료 이름 */
-  "재료 이름": [
+  /** 1) 재료 */
+  "재료": [
     // 재료 구성 블록(이름+양+단위)
     { type: "ingredient", label: "재료", template: "ingredient_block", fields: { QUANTITY: 1, UNIT: "개" } },
     // 개별 이름 블록들
@@ -27,8 +27,8 @@ export const CATALOG = {
     })),
   ],
 
-  /** 2) 조리 단계(Statement) */
-  "조리 단계": [
+  /** 2) 조리단계(Statement) */
+  "조리단계": [
     // 시간 있는 단계
     ...["mix","steam","fry","boil","grill","deepfry"].map((k) => ({
       type: `${k}_stmt`, template: `${k}_block`, fields: { TIME: 5, UNIT: "분" },
@@ -41,8 +41,8 @@ export const CATALOG = {
     { type: "wait_stmt", template: "wait_block", fields: { TIME: 5, UNIT: "분" } },
   ],
 
-  /** 3) 조리 값(Value) */
-  "조리 값": [
+  /** 3) 조리값(Value) */
+  "조리값": [
     ...["mix","steam","fry","boil","grill","deepfry"].map((k) => ({
       type: `${k}_val`, template: `${k}_value_block`, fields: { TIME: 5, UNIT: "분" },
     })),
@@ -51,8 +51,8 @@ export const CATALOG = {
     })),
   ],
 
-  /** 4) 흐름 제어 */
-  "흐름 제어": [
+  /** 4) 흐름 */
+  "흐름": [
     { type: "start", template: "start_block", fields: {} },
     { type: "repeat_n", template: "repeat_n_times", fields: { COUNT: 3 } },
     { type: "repeat_until", template: "repeat_until_true", fields: { CONDITION: "예: 면이 익을" } },
@@ -62,6 +62,7 @@ export const CATALOG = {
     { type: "finish", template: "finish_block", fields: {} },
   ],
 };
+
 
 
 
