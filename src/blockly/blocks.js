@@ -300,6 +300,72 @@ Blockly.Blocks["combine_item_block"] = {
     this.contextMenu = false;
   },
 };
+// 한 번만 등록되도록 플래그
+export function registerMissingBlocks(Blockly) {
+  if (!Blockly || !Blockly.Blocks) return;
+  if (Blockly.Blocks.__blockchef_patch_registered) return;
+  Blockly.Blocks.__blockchef_patch_registered = true;
+
+  // 1) ingredient (value) — 없을 때만 최소 형태로 보강
+  if (!Blockly.Blocks['ingredient']) {
+    Blockly.Blocks['ingredient'] = {
+      init: function () {
+        this.setColour(30); // 갈색 톤
+        this.appendDummyInput()
+          .appendField("재료")
+          .appendField(new Blockly.FieldDropdown([
+            ["감자", "POTATO"], ["당근", "CARROT"], ["양파", "ONION"],
+            ["대파", "LEEK"], ["소금", "SALT"], ["설탕", "SUGAR"], ["고추", "CHILI"],
+          ]), "NAME");
+        this.appendDummyInput()
+          .appendField("양")
+          .appendField(new Blockly.FieldNumber(1, 0, 9999, 1), "AMOUNT")
+          .appendField(new Blockly.FieldDropdown([
+            ["개", "EA"], ["g", "G"], ["컵", "CUP"], ["ml", "ML"],
+          ]), "UNIT");
+        this.setOutput(true, "INGREDIENT");
+        this.setTooltip("재료 블록(미정의 시 보강 등록)");
+      }
+    };
+  }
+
+  // 2) action_boil (statement) — 없을 때만 등록
+  if (!Blockly.Blocks['action_boil']) {
+    Blockly.Blocks['action_boil'] = {
+      init: function () {
+        this.setColour(200);
+        this.appendValueInput("ING").setCheck("INGREDIENT").appendField("재료");
+        this.appendDummyInput()
+          .appendField("을/를 끓이기 (분)")
+          .appendField(new Blockly.FieldNumber(5, 0, 600, 1), "TIME");
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+        this.setTooltip("재료를 n분 동안 끓이는 동작(미정의 시 보강 등록)");
+      }
+    };
+  }
+
+  // 3) combine (statement) — 없을 때만 등록 (뮤테이터 없이 안정형)
+  if (!Blockly.Blocks['combine']) {
+    Blockly.Blocks['combine'] = {
+      init: function () {
+        this.setColour(120);
+        this.appendDummyInput().appendField("합치기");
+        this.appendValueInput("A").setCheck("INGREDIENT").appendField("재료 1");
+        this.appendValueInput("B").setCheck("INGREDIENT").appendField("재료 2");
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+        this.setTooltip("두 재료를 하나로 합침(미정의 시 보강 등록)");
+      }
+    };
+  }
+}
+
+// 혹시 기본 내보내기가 필요한 곳이 있었다면, 유지용 래퍼도 제공
+export default function registerBlocks(Blockly) {
+  registerMissingBlocks(Blockly);
+}
+
 
 
 
