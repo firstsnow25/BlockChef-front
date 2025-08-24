@@ -5,7 +5,6 @@ export const CATEGORY_ORDER = [
   "조리 단계",
   "조리 값",
   "흐름 제어",
-  "합치기",
 ];
 
 /** 재료 이름들 */
@@ -61,11 +60,6 @@ export const CATALOG = {
     { type: "continue", template: "continue_block", fields: {} },
     { type: "break", template: "break_block", fields: {} },
     { type: "finish", template: "finish_block", fields: {} },
-  ],
-
-  /** 5) 합치기 */
-  "합치기": [
-    { type: "combine", template: "combine_block", fields: {} },
   ],
 };
 
