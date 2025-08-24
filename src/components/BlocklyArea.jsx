@@ -9,36 +9,33 @@ import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
-import "../blockly/blocks";                // 커스텀 블록 정의
+import "../blockly/blocks";
 import { CATALOG, CATEGORY_ORDER } from "../blockly/catalog";
 import "../blockly/blockly.css";
 
-/** =========================
- * BlockChef 테마
- * ========================= */
 const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
   base: Blockly.Themes.Classic,
   categoryStyles: {
     ingredient_category: { colour: "#b08968" },
-    action_category:     { colour: "#d9776f" },
-    flow_category:       { colour: "#6aa6e8" },
-    combine_category:    { colour: "#c084fc" },
+    action_category: { colour: "#d9776f" },
+    flow_category: { colour: "#6aa6e8" },
+    combine_category: { colour: "#c084fc" },
   },
   blockStyles: {
     ingredient_blocks: {
-      colourPrimary:   "#b08968",
+      colourPrimary: "#b08968",
       colourSecondary: "#caa27e",
-      colourTertiary:  "#8c6f56",
+      colourTertiary: "#8c6f56",
     },
     action_blocks: {
-      colourPrimary:   "#d9776f",
+      colourPrimary: "#d9776f",
       colourSecondary: "#eba39d",
-      colourTertiary:  "#ba625b",
+      colourTertiary: "#ba625b",
     },
     flow_blocks: {
-      colourPrimary:   "#6aa6e8",
+      colourPrimary: "#6aa6e8",
       colourSecondary: "#8fbaf0",
-      colourTertiary:  "#4f89c5",
+      colourTertiary: "#4f89c5",
     },
   },
   componentStyles: {
@@ -47,8 +44,8 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
     flyoutForegroundColour: "#d9d9d9",
     flyoutForegroundOpacity: 1,
     workspaceBackgroundColour: "transparent",
-    toolboxBackgroundColour:  "transparent",
-    toolboxForegroundColour:  "#666",
+    toolboxBackgroundColour: "transparent",
+    toolboxForegroundColour: "#666",
     insertionMarker: "#ffb703",
     insertionMarkerOpacity: 0.6,
     scrollbars: true,
@@ -57,12 +54,12 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
 
 const PALETTE_MARGIN = 8;
 
-/** 팔레트 컨텐츠에서 정의되지 않은 블록 타입은 제거 (하얀화 방지) */
+/** 정의되지 않은 템플릿 제거(팔레트 하얀화 방지) */
 function safeToolboxContents(list) {
   const out = [];
   list.forEach((e) => {
     const type = e.template;
-    if (!type || !Blockly.Blocks[type]) return; // unknown type skip
+    if (!type || !Blockly.Blocks[type]) return;
     out.push({
       kind: "block",
       type,
@@ -72,15 +69,14 @@ function safeToolboxContents(list) {
   });
   return out;
 }
-
-/** 현재 카테고리의 flyoutToolbox JSON */
 function makeToolboxJson(activeCategory) {
   const key = activeCategory ?? CATEGORY_ORDER[0];
   const entries = CATALOG[key] ?? [];
-  return {
-    kind: "flyoutToolbox",
-    contents: safeToolboxContents(entries),
-  };
+  const contents = safeToolboxContents(entries);
+  // 비어도 절대 하얗게 보이지 않도록 라벨을 넣는다.
+  return contents.length
+    ? { kind: "flyoutToolbox", contents }
+    : { kind: "flyoutToolbox", contents: [{ kind: "label", text: "사용 가능한 블록이 없습니다" }] };
 }
 
 const BlocklyArea = forwardRef(function BlocklyArea(
@@ -90,18 +86,16 @@ const BlocklyArea = forwardRef(function BlocklyArea(
   const hostRef = useRef(null);
   const workspaceRef = useRef(null);
   const changeListenerRef = useRef(null);
-
-  // 드래그 시작 위치 저장 → 팔레트 드롭 시 원위치 복귀
   const dragStartPosRef = useRef(new Map());
 
-  /** 워크스페이스 1회 생성 */
+  // 한번만 생성
   useEffect(() => {
     if (!hostRef.current) return;
 
     const ws = Blockly.inject(hostRef.current, {
       theme: BlockChefTheme,
       toolbox: makeToolboxJson(activeCategory),
-      renderer: "geras",              // 간격/겹침 안정
+      renderer: "geras",
       toolboxPosition: "start",
       collapse: false,
       comments: false,
@@ -114,7 +108,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     });
     workspaceRef.current = ws;
 
-    // 초기 XML
     if (initialXml) {
       try {
         const dom = Blockly.Xml.textToDom(initialXml);
@@ -124,13 +117,12 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       }
     }
 
-    /** 1) 생성 시 lockFields 적용 */
-    const lockOnCreate = (ev) => {
+    // 생성시 lockFields
+    const onCreate = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_CREATE) return;
       (ev.ids || []).forEach((id) => {
         const b = ws.getBlockById(id);
-        if (!b) return;
-        if (!b.data) return;
+        if (!b || !b.data) return;
         try {
           const meta = JSON.parse(b.data);
           (meta.lockFields || []).forEach((fname) => {
@@ -140,23 +132,19 @@ const BlocklyArea = forwardRef(function BlocklyArea(
         } catch {}
       });
     };
-    ws.addChangeListener(lockOnCreate);
+    ws.addChangeListener(onCreate);
 
-    /** 2) 플라이아웃(팔레트) 설정: 삭제영역 비활성 + 간격/리플로우 */
+    // flyout 세팅: 삭제영역 금지 + 간격
     const flyout = ws.getFlyout?.();
     if (flyout) {
       if (typeof flyout.isDeleteArea === "function") {
-        flyout.isDeleteArea = () => false; // 팔레트에 드롭해도 삭제되지 않게
+        flyout.isDeleteArea = () => false;
       }
-      if (typeof flyout.gap_ === "number") {
-        flyout.gap_ = 16; // 겹침 방지용 간격
-      }
-      try {
-        flyout.reflow?.();
-      } catch {}
+      if (typeof flyout.gap_ === "number") flyout.gap_ = 16;
+      try { flyout.reflow?.(); } catch {}
     }
 
-    /** 3) 드래그 가드(원위치 복귀 + 경계 밖 밀어내기) */
+    // 드래그: 팔레트로 드롭하면 원위치 복귀
     const onDrag = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_DRAG) return;
       const b = ws.getBlockById(ev.blockId);
@@ -164,7 +152,9 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 
       const f = ws.getFlyout?.();
       const flyoutWidth = f?.getWidth ? f.getWidth() : 0;
-      const minX = flyoutWidth + PALETTE_MARGIN;
+      const metrics = ws.getMetrics?.(); // viewLeft 등
+      const viewLeft = metrics?.viewLeft || 0;
+      const minX = viewLeft + flyoutWidth + PALETTE_MARGIN;
 
       if (ev.isStart) {
         const start = b.getRelativeToSurfaceXY();
@@ -173,31 +163,32 @@ const BlocklyArea = forwardRef(function BlocklyArea(
         const xy = b.getRelativeToSurfaceXY();
         if (xy.x < minX) {
           const start = dragStartPosRef.current.get(ev.blockId);
-          if (start) {
-            b.moveBy(start.x - xy.x, start.y - xy.y); // 원위치
-          } else {
-            b.moveBy(minX - xy.x, 0); // 최소한 경계 밖으로
-          }
+          if (start) b.moveBy(start.x - xy.x, start.y - xy.y);
+          else b.moveBy(minX - xy.x, 0);
         }
         dragStartPosRef.current.delete(ev.blockId);
       }
     };
     ws.addChangeListener(onDrag);
 
-    /** 4) 이동 중에도 팔레트 침범 방지 */
+    // 이동 경계가드 (스크롤 위치(viewLeft) 기준의 절대 경계)
     const onMove = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_MOVE) return;
       const b = ws.getBlockById(ev.blockId);
       if (!b || b.isShadow()) return;
+
       const f = ws.getFlyout?.();
       const flyoutWidth = f?.getWidth ? f.getWidth() : 0;
-      const minX = flyoutWidth + PALETTE_MARGIN;
+      const metrics = ws.getMetrics?.();
+      const viewLeft = metrics?.viewLeft || 0;
+      const minX = viewLeft + flyoutWidth + PALETTE_MARGIN;
+
       const xy = b.getRelativeToSurfaceXY();
       if (xy.x < minX) b.moveBy(minX - xy.x, 0);
     };
     ws.addChangeListener(onMove);
 
-    /** 5) 변경 → XML 전달 (rAF 디바운스) */
+    // xml 변경 전달
     let rafId = null;
     changeListenerRef.current = () => {
       if (!onXmlChange) return;
@@ -212,23 +203,21 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(changeListenerRef.current);
 
-    /** 리사이즈 싱크 */
+    // 리사이즈
     const ro = new ResizeObserver(() => Blockly.svgResize(ws));
     ro.observe(hostRef.current);
 
     return () => {
       try {
-        if (changeListenerRef.current)
-          ws.removeChangeListener(changeListenerRef.current);
+        if (changeListenerRef.current) ws.removeChangeListener(changeListenerRef.current);
         ws.dispose();
       } catch {}
       ro.disconnect();
       workspaceRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 1회만
 
-  /** 카테고리 전환: EMPTY → REAL 더블 스왑으로 하얀화 방지 */
+  // 카테고리 전환: EMPTY -> REAL 더블 스왑
   useEffect(() => {
     const ws = workspaceRef.current;
     if (!ws) return;
@@ -236,16 +225,11 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     const REAL_TB = makeToolboxJson(activeCategory);
     const EMPTY_TB = { kind: "flyoutToolbox", contents: [{ kind: "label", text: "…" }] };
 
-    const swapToolbox = () => {
-      // A) 빈 툴박스로 초기화
+    const swap = () => {
       ws.updateToolbox(EMPTY_TB);
       const flyoutA = ws.getFlyout?.();
-      try {
-        flyoutA?.setVisible?.(false);
-        flyoutA?.reflow?.();
-      } catch {}
+      try { flyoutA?.setVisible?.(false); flyoutA?.reflow?.(); } catch {}
 
-      // B) 다음 프레임에 실제 툴박스 주입
       requestAnimationFrame(() => {
         ws.updateToolbox(REAL_TB);
         const flyoutB = ws.getFlyout?.();
@@ -255,11 +239,9 @@ const BlocklyArea = forwardRef(function BlocklyArea(
           flyoutB?.reflow?.();
           flyoutB?.scrollToStart?.();
         } catch {}
-
-        // 드물게 빈 경우 다시 한 번 스왑
-        const count =
-          flyoutB?.getWorkspace?.()?.getTopBlocks(false).length ?? 0;
-        if (REAL_TB.contents.length > 0 && count === 0) {
+        // 혹시라도 빈 경우 한 번 더
+        const count = flyoutB?.getWorkspace?.()?.getTopBlocks(false).length ?? 0;
+        if ((REAL_TB.contents?.length || 0) > 0 && count === 0) {
           setTimeout(() => {
             ws.updateToolbox(EMPTY_TB);
             setTimeout(() => {
@@ -279,10 +261,9 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       });
     };
 
-    swapToolbox();
+    swap();
   }, [activeCategory]);
 
-  // 외부에서 제어할 API
   useImperativeHandle(ref, () => ({
     getXml() {
       const ws = workspaceRef.current;
@@ -303,29 +284,24 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       workspaceRef.current?.clear();
     },
     undo() {
-      workspaceRef.current &&
-        Blockly.Events.UndoRedo.undo(workspaceRef.current);
+      workspaceRef.current && Blockly.Events.UndoRedo.undo(workspaceRef.current);
     },
     redo() {
-      workspaceRef.current &&
-        Blockly.Events.UndoRedo.redo(workspaceRef.current);
+      workspaceRef.current && Blockly.Events.UndoRedo.redo(workspaceRef.current);
     },
   }));
 
   return (
     <div
       ref={hostRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-        overflow: "hidden", // 팔레트/작업영역 경계 침범 보이지 않게
-      }}
+      style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden" }}
     />
   );
 });
 
 export default BlocklyArea;
+
+
 
 
 
