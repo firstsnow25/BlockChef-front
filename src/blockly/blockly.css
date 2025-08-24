@@ -18,7 +18,7 @@
   transform: translate(0, 0) !important;
 }
 
-/* 드래그 마커/선택 강조 */
+/* 선택 강조 */
 .blocklySelected > path.blocklyPath {
   stroke: #ffb703 !important;
   stroke-width: 2px !important;
@@ -30,9 +30,10 @@
   font-size: 12px !important;
 }
 
-/* 툴 버튼 위치 */
-.blocklyZoom { right: 12px !important; bottom: 60px !important; }
+/* 툴 버튼 위치 고정 */
+.blocklyZoom  { right: 12px !important; bottom: 60px !important; }
 .blocklyTrash { right: 12px !important; bottom: 12px !important; }
+
 
 
 
