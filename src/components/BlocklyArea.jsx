@@ -9,11 +9,11 @@ import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
-import "../blockly/blocks";              // 커스텀 블록 정의
+import "../blockly/blocks";               // 커스텀 블록 정의
 import { CATALOG, CATEGORY_ORDER } from "../blockly/catalog";
 import "../blockly/blockly.css";
 
-/** =========================
+/* =========================
  * BlockChef 테마
  * ========================= */
 const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
@@ -54,10 +54,10 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
   },
 });
 
-// 팔레트 좌우 경계 보정
+// 팔레트 경계와의 안전 여백(픽셀)
 const PALETTE_MARGIN = 8;
 
-/** 팔레트 목록을 안전하게 구성(정의 안 된 타입은 제외) */
+/* 정의되지 않은 블록 타입을 걸러서 팔레트 빈화면 방지 */
 function safeToolboxContents(list) {
   const out = [];
   list.forEach((e) => {
@@ -73,7 +73,7 @@ function safeToolboxContents(list) {
   return out;
 }
 
-/** 현재 카테고리의 툴박스 JSON(flyout 전용) */
+/* 현재 카테고리용 팔레트(flyout) JSON */
 function makeToolboxJson(activeCategory) {
   const key = activeCategory ?? CATEGORY_ORDER[0];
   const entries = CATALOG[key] ?? [];
@@ -91,12 +91,10 @@ const BlocklyArea = forwardRef(function BlocklyArea(
   const workspaceRef = useRef(null);
   const changeListenerRef = useRef(null);
 
-  // ⬇️ 막 생성된 블록(팔레트에서 방금 끌어낸 블록) ID 기억 → 첫 이동/드래그까지만 가드 제외
-  const freshIds = useRef(new Set());
-  // 드래그 시작 좌표 저장(팔레트 쪽에 떨어뜨리면 원위치 복귀용)
+  // 드래그 시작 위치 저장 → 팔레트로 드롭 시 원위치 복귀
   const dragStartPosRef = useRef(new Map());
 
-  /** 워크스페이스 1회 생성 */
+  /* 워크스페이스 1회 생성 */
   useEffect(() => {
     if (!hostRef.current) return;
 
@@ -118,27 +116,34 @@ const BlocklyArea = forwardRef(function BlocklyArea(
         minScale: 0.4,
         pinch: true,
       },
-      // ⬇️ 가로 스크롤 비활성
+      // ✅ 가로 스크롤 제거, 세로만
       move: { scrollbars: { horizontal: false, vertical: true }, drag: true, wheel: true },
       sounds: false,
     });
     workspaceRef.current = ws;
 
-    // 초기 XML
+    // ✅ 초기 XML 로드 (안전 직렬화)
     if (initialXml) {
       try {
-        const dom = Blockly.Xml.textToDom(initialXml);
-        Blockly.Xml.domToWorkspace(dom, ws);
+        const xmlStr =
+          typeof initialXml === "string"
+            ? initialXml
+            : (typeof initialXml === "object"
+                ? new XMLSerializer().serializeToString(initialXml)
+                : "");
+        if (xmlStr) {
+          const dom = Blockly.Xml.textToDom(xmlStr);
+          Blockly.Xml.domToWorkspace(dom, ws);
+        }
       } catch (e) {
         console.error("초기 XML 로드 실패:", e);
       }
     }
 
-    /** (A) 생성 시 잠금필드 적용 + freshIds 등록 */
-    const onCreate = (ev) => {
+    // 생성 시 lockFields 적용
+    const lockOnCreate = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_CREATE) return;
       (ev.ids || []).forEach((id) => {
-        freshIds.current.add(id); // 첫 드롭 1회 허용
         const b = ws.getBlockById(id);
         if (!b) return;
         if (b.data) {
@@ -152,42 +157,40 @@ const BlocklyArea = forwardRef(function BlocklyArea(
         }
       });
     };
-    ws.addChangeListener(onCreate);
+    ws.addChangeListener(lockOnCreate);
 
-    /** (B) 팔레트(Flyout) 보정: 삭제영역 OFF + 갭/리플로우 */
+    // 팔레트(플라이아웃) 설정: 삭제영역 비활성 + 간격 보정 + 초기 reflow
     const flyout = ws.getFlyout?.();
     if (flyout) {
       if (typeof flyout.isDeleteArea === "function") {
+        // 팔레트로 드롭해도 삭제되지 않게
         flyout.isDeleteArea = function () {
           return false;
         };
       }
-      if (typeof flyout.gap_ === "number") {
-        flyout.gap_ = 16;
-      }
+      if (typeof flyout.gap_ === "number") flyout.gap_ = 16;
       try {
         flyout.reflow?.();
         flyout.reflowInternal?.();
       } catch {}
     }
 
-    /** (C) 드래그 가드 (팔레트 침범 방지) */
+    // ✅ 드래그 종료 시에만 경계 보정 (첫 칼럼까지 드롭 허용)
     const onDrag = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_DRAG) return;
       const b = ws.getBlockById(ev.blockId);
       if (!b || b.isShadow()) return;
 
-      // 막 생성된 블록은 첫 드롭은 예외 허용
-      if (freshIds.current.has(ev.blockId)) return;
-
       const f = ws.getFlyout?.();
       const flyoutWidth = f?.getWidth ? f.getWidth() : 0;
-      const minX = flyoutWidth + PALETTE_MARGIN;
+
+      // 내부 그터(회색 패딩)를 보정: 팔레트 바로 옆 라인까지 허용되도록 약간 당김
+      const minX = Math.max(0, flyoutWidth - 90 + PALETTE_MARGIN);
 
       if (ev.isStart) {
         const start = b.getRelativeToSurfaceXY();
         dragStartPosRef.current.set(ev.blockId, { x: start.x, y: start.y });
-      } else if (!ev.isStart) {
+      } else if (ev.isEnd) {
         const xy = b.getRelativeToSurfaceXY();
         if (xy.x < minX) {
           const start = dragStartPosRef.current.get(ev.blockId);
@@ -202,30 +205,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(onDrag);
 
-    /** (D) 이동 가드 (팔레트로 파고들지 않기) */
-    const onMove = (ev) => {
-      if (ev.type !== Blockly.Events.BLOCK_MOVE) return;
-      const b = ws.getBlockById(ev.blockId);
-      if (!b || b.isShadow()) return;
-
-      // 막 생성된 블록은 첫 MOVE에서만 예외 허용하고 제거
-      if (freshIds.current.has(ev.blockId)) {
-        freshIds.current.delete(ev.blockId);
-        return;
-      }
-
-      const f = ws.getFlyout?.();
-      const flyoutWidth = f?.getWidth ? f.getWidth() : 0;
-      const minX = flyoutWidth + PALETTE_MARGIN;
-
-      const xy = b.getRelativeToSurfaceXY();
-      if (xy.x < minX) {
-        b.moveBy(minX - xy.x, 0);
-      }
-    };
-    ws.addChangeListener(onMove);
-
-    /** (E) 변경 → XML 전달 (rAF 디바운스) */
+    // 변경 → XML 전달 (rAF 디바운스)
     let rafId = null;
     changeListenerRef.current = () => {
       if (!onXmlChange) return;
@@ -240,14 +220,13 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(changeListenerRef.current);
 
-    /** 리사이즈 싱크 */
+    // 리사이즈 싱크
     const ro = new ResizeObserver(() => Blockly.svgResize(ws));
     ro.observe(hostRef.current);
 
     return () => {
       try {
-        if (changeListenerRef.current)
-          ws.removeChangeListener(changeListenerRef.current);
+        if (changeListenerRef.current) ws.removeChangeListener(changeListenerRef.current);
         ws.dispose();
       } catch {}
       ro.disconnect();
@@ -256,12 +235,13 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 최초 1회만
 
-  /** 카테고리 전환 시 팔레트 안전 교체 */
+  /* 카테고리 전환 시 팔레트 교체 */
   useEffect(() => {
     const ws = workspaceRef.current;
     if (!ws) return;
 
     const tb = makeToolboxJson(activeCategory);
+
     let raf;
     try {
       raf = requestAnimationFrame(() => {
@@ -283,7 +263,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     return () => raf && cancelAnimationFrame(raf);
   }, [activeCategory]);
 
-  // 외부 제어 API
+  /* 외부 제어 API */
   useImperativeHandle(ref, () => ({
     getXml() {
       const ws = workspaceRef.current;
@@ -295,9 +275,19 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       const ws = workspaceRef.current;
       if (!ws) return;
       ws.clear();
-      if (xmlText) {
-        const dom = Blockly.Xml.textToDom(xmlText);
+      if (!xmlText) return;
+      try {
+        const xmlStr =
+          typeof xmlText === "string"
+            ? xmlText
+            : (typeof xmlText === "object"
+                ? new XMLSerializer().serializeToString(xmlText)
+                : "");
+        if (!xmlStr) return;
+        const dom = Blockly.Xml.textToDom(xmlStr);
         Blockly.Xml.domToWorkspace(dom, ws);
+      } catch (e) {
+        console.error("XML 불러오기 실패:", e);
       }
     },
     clear() {
@@ -320,13 +310,15 @@ const BlocklyArea = forwardRef(function BlocklyArea(
         width: "100%",
         height: "100%",
         position: "relative",
-        overflow: "hidden", // 경계 침범 내용 가림
+        overflow: "hidden", // 팔레트/작업영역 경계 침범 보이기 방지
       }}
     />
   );
 });
 
 export default BlocklyArea;
+
+
 
 
 
