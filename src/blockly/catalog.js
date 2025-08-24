@@ -11,7 +11,6 @@ export const CATEGORY_ORDER = [
 const ING_NAMES = ["감자", "당근", "양파", "달걀", "소금", "물", "라면사리", "라면스프", "대파", "고추"];
 
 export const CATALOG = {
-  /** 1) 재료 이름 */
   "재료 이름": [
     { type: "ingredient", label: "재료", template: "ingredient_block", fields: { QUANTITY: 1, UNIT: "개" } },
     ...ING_NAMES.map((n) => ({
@@ -22,7 +21,6 @@ export const CATALOG = {
     })),
   ],
 
-  /** 2) 조리 단계(statement) */
   "조리 단계": [
     { type: "boil_stmt", label: "끓이기", template: "boil_block", fields: { TIME: 5, UNIT: "분" } },
     { type: "fry_stmt", label: "볶기", template: "fry_block", fields: { TIME: 5, UNIT: "분" } },
@@ -35,7 +33,6 @@ export const CATALOG = {
     { type: "remove_seed_stmt", label: "씨 제거", template: "remove_seed_block", fields: {} },
   ],
 
-  /** 3) 조리 값(value) */
   "조리 값": [
     { type: "boil_val", label: "끓이기(값)", template: "boil_value_block", fields: { TIME: 5, UNIT: "분" } },
     { type: "fry_val", label: "볶기(값)", template: "fry_value_block", fields: { TIME: 5, UNIT: "분" } },
@@ -48,7 +45,6 @@ export const CATALOG = {
     { type: "remove_seed_val", label: "씨 제거(값)", template: "remove_seed_value_block", fields: {} },
   ],
 
-  /** 4) 흐름 제어 */
   "흐름 제어": [
     { type: "start", label: "시작", template: "start_block", fields: {} },
     { type: "repeat_n", label: "반복 N회", template: "repeat_n_times", fields: { COUNT: 3 } },
@@ -59,7 +55,6 @@ export const CATALOG = {
     { type: "finish", label: "끝", template: "finish_block", fields: {} },
   ],
 
-  /** 5) 합치기 (뮤테이터) */
   "합치기": [
     { type: "combine", label: "합치기", template: "combine_block", fields: {} },
   ],

@@ -1,36 +1,22 @@
 /* src/blockly/blockly.css */
 
-/* 작업영역 배경 그리드 */
-.blocklyMainBackground {
-  stroke: #eaeaea !important;
-}
+/* 작업영역 배경 */
+.blocklyMainBackground { stroke: #eaeaea !important; }
 
-/* 팔레트(플라이아웃) 배경/경계 */
-.blocklyFlyoutBackground {
-  fill: #efefef !important;
-}
-.blocklyFlyout {
-  box-shadow: inset -1px 0 0 #dedede;
-}
+/* 팔레트 배경/경계 */
+.blocklyFlyoutBackground { fill: #efefef !important; }
+.blocklyFlyout { box-shadow: inset -1px 0 0 #dedede; }
 
-/* 팔레트 아이템 겹침 방지: 캔버스 변형 초기화 */
-.blocklyFlyout .blocklyBlockCanvas {
-  transform: translate(0, 0) !important;
-}
+/* 팔레트 아이템 겹침 방지 */
+.blocklyFlyout .blocklyBlockCanvas { transform: translate(0,0) !important; }
 
 /* 선택 강조 */
-.blocklySelected > path.blocklyPath {
-  stroke: #ffb703 !important;
-  stroke-width: 2px !important;
-}
+.blocklySelected > path.blocklyPath { stroke: #ffb703 !important; stroke-width: 2px !important; }
 
 /* 입력 필드 가독성 */
-.blocklyHtmlInput {
-  padding: 2px 4px !important;
-  font-size: 12px !important;
-}
+.blocklyHtmlInput { padding: 2px 4px !important; font-size: 12px !important; }
 
-/* 툴 버튼 위치 고정 */
+/* 우측 버튼 위치 */
 .blocklyZoom  { right: 12px !important; bottom: 60px !important; }
 .blocklyTrash { right: 12px !important; bottom: 12px !important; }
 

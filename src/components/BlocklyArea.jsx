@@ -1,10 +1,5 @@
 // src/components/BlocklyArea.jsx
-import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-} from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import "blockly/msg/ko";
@@ -22,21 +17,9 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
     combine_category: { colour: "#c084fc" },
   },
   blockStyles: {
-    ingredient_blocks: {
-      colourPrimary: "#b08968",
-      colourSecondary: "#caa27e",
-      colourTertiary: "#8c6f56",
-    },
-    action_blocks: {
-      colourPrimary: "#d9776f",
-      colourSecondary: "#eba39d",
-      colourTertiary: "#ba625b",
-    },
-    flow_blocks: {
-      colourPrimary: "#6aa6e8",
-      colourSecondary: "#8fbaf0",
-      colourTertiary: "#4f89c5",
-    },
+    ingredient_blocks: { colourPrimary: "#b08968", colourSecondary: "#caa27e", colourTertiary: "#8c6f56" },
+    action_blocks: { colourPrimary: "#d9776f", colourSecondary: "#eba39d", colourTertiary: "#ba625b" },
+    flow_blocks: { colourPrimary: "#6aa6e8", colourSecondary: "#8fbaf0", colourTertiary: "#4f89c5" },
   },
   componentStyles: {
     flyoutBackgroundColour: "#efefef",
@@ -54,7 +37,6 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
 
 const PALETTE_MARGIN = 8;
 
-/** 정의되지 않은 템플릿 제거(팔레트 하얀화 방지) */
 function safeToolboxContents(list) {
   const out = [];
   list.forEach((e) => {
@@ -73,7 +55,6 @@ function makeToolboxJson(activeCategory) {
   const key = activeCategory ?? CATEGORY_ORDER[0];
   const entries = CATALOG[key] ?? [];
   const contents = safeToolboxContents(entries);
-  // 비어도 절대 하얗게 보이지 않도록 라벨을 넣는다.
   return contents.length
     ? { kind: "flyoutToolbox", contents }
     : { kind: "flyoutToolbox", contents: [{ kind: "label", text: "사용 가능한 블록이 없습니다" }] };
@@ -88,7 +69,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
   const changeListenerRef = useRef(null);
   const dragStartPosRef = useRef(new Map());
 
-  // 한번만 생성
   useEffect(() => {
     if (!hostRef.current) return;
 
@@ -117,7 +97,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       }
     }
 
-    // 생성시 lockFields
+    // 생성 시 lockFields 적용
     const onCreate = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_CREATE) return;
       (ev.ids || []).forEach((id) => {
@@ -134,17 +114,15 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(onCreate);
 
-    // flyout 세팅: 삭제영역 금지 + 간격
+    // 팔레트 삭제영역 금지 + 간격
     const flyout = ws.getFlyout?.();
     if (flyout) {
-      if (typeof flyout.isDeleteArea === "function") {
-        flyout.isDeleteArea = () => false;
-      }
+      if (typeof flyout.isDeleteArea === "function") flyout.isDeleteArea = () => false;
       if (typeof flyout.gap_ === "number") flyout.gap_ = 16;
       try { flyout.reflow?.(); } catch {}
     }
 
-    // 드래그: 팔레트로 드롭하면 원위치 복귀
+    // 드래그: 팔레트로 드롭하면 원위치 복귀 (경계 = viewLeft + flyoutWidth + margin)
     const onDrag = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_DRAG) return;
       const b = ws.getBlockById(ev.blockId);
@@ -152,7 +130,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 
       const f = ws.getFlyout?.();
       const flyoutWidth = f?.getWidth ? f.getWidth() : 0;
-      const metrics = ws.getMetrics?.(); // viewLeft 등
+      const metrics = ws.getMetrics?.();
       const viewLeft = metrics?.viewLeft || 0;
       const minX = viewLeft + flyoutWidth + PALETTE_MARGIN;
 
@@ -171,7 +149,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(onDrag);
 
-    // 이동 경계가드 (스크롤 위치(viewLeft) 기준의 절대 경계)
+    // 이동 경계가드
     const onMove = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_MOVE) return;
       const b = ws.getBlockById(ev.blockId);
@@ -188,7 +166,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(onMove);
 
-    // xml 변경 전달
+    // XML 변경 전달
     let rafId = null;
     changeListenerRef.current = () => {
       if (!onXmlChange) return;
@@ -203,7 +181,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(changeListenerRef.current);
 
-    // 리사이즈
     const ro = new ResizeObserver(() => Blockly.svgResize(ws));
     ro.observe(hostRef.current);
 
@@ -217,7 +194,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
   }, []); // 1회만
 
-  // 카테고리 전환: EMPTY -> REAL 더블 스왑
+  // 카테고리 전환: EMPTY → REAL 더블 스왑(하얀화 방지)
   useEffect(() => {
     const ws = workspaceRef.current;
     if (!ws) return;
@@ -239,7 +216,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
           flyoutB?.reflow?.();
           flyoutB?.scrollToStart?.();
         } catch {}
-        // 혹시라도 빈 경우 한 번 더
+
         const count = flyoutB?.getWorkspace?.()?.getTopBlocks(false).length ?? 0;
         if ((REAL_TB.contents?.length || 0) > 0 && count === 0) {
           setTimeout(() => {
@@ -300,7 +277,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
-
 
 
 
