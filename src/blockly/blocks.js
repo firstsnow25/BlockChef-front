@@ -1,5 +1,5 @@
 // src/blockly/blocks.js
-import * as Blockly from "blockly"; // ✅ 네임스페이스 임포트만 사용 (named import 금지)
+import * as Blockly from "blockly"; // ✅ 네임스페이스 임포트만 사용
 
 /* ───────── 재료 이름(value) 예시 ───────── */
 const ING_NAMES = ["감자", "당근", "양파", "달걀", "소금", "물", "라면사리", "라면스프", "대파", "고추"];
@@ -171,17 +171,66 @@ Blockly.Blocks["finish_block"] = {
   },
 };
 
-/* ───────── 합치기(combine) – 뮤테이터로 value 입력 동적 추가 ───────── */
-Blockly.Blocks["combine_block"] = {
-  init() {
-    this.setStyle("flow_blocks"); // 필요하면 별도 스타일로 분리 가능
-    this.setPreviousStatement(true);
-    this.setNextStatement(true);
-    this.itemCount_ = 2; // 기본 2개
-    this.updateShape_();
-    this.setMutator(new Blockly.Mutator(["combine_item_block"])); // ✅ 네임스페이스 통해 사용
-    this.setTooltip("여러 재료/중간 결과를 하나로 합칩니다.");
+/* ───────── 합치기(combine) – registerMutator + Extensions.apply (Mutator 클래스 호출 X) ───────── */
+
+// 뮤테이터 믹스인
+const COMBINE_MUTATOR_MIXIN = {
+  itemCount_: 2,
+
+  mutationToDom() {
+    const container = Blockly.utils.xml.createElement("mutation");
+    container.setAttribute("items", String(this.itemCount_));
+    return container;
   },
+
+  domToMutation(xml) {
+    const items = parseInt(xml.getAttribute("items") || "2", 10);
+    this.itemCount_ = isNaN(items) ? 2 : Math.max(1, items);
+    this.updateShape_();
+  },
+
+  decompose(workspace) {
+    const container = workspace.newBlock("combine_container_block");
+    container.initSvg();
+    let connection = container.getInput("STACK").connection;
+    for (let i = 0; i < this.itemCount_; i++) {
+      const itemBlock = workspace.newBlock("combine_item_block");
+      itemBlock.initSvg();
+      connection.connect(itemBlock.previousConnection);
+      connection = itemBlock.nextConnection;
+    }
+    return container;
+  },
+
+  compose(containerBlock) {
+    let itemBlock = containerBlock.getInputTargetBlock("STACK");
+    const connections = [];
+    while (itemBlock) {
+      connections.push(itemBlock.valueConnection_);
+      itemBlock =
+        itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+    }
+    this.itemCount_ = Math.max(1, connections.length);
+    this.updateShape_();
+    for (let i = 0; i < this.itemCount_; i++) {
+      if (connections[i]) {
+        this.getInput("ITEM" + i).connection.connect(connections[i]);
+      }
+    }
+  },
+
+  saveConnections(containerBlock) {
+    let itemBlock = containerBlock.getInputTargetBlock("STACK");
+    let i = 0;
+    while (itemBlock) {
+      const input = this.getInput("ITEM" + i);
+      itemBlock.valueConnection_ = input && input.connection.targetConnection;
+      i++;
+      itemBlock =
+        itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+    }
+  },
+
   updateShape_() {
     // 기존 입력 제거
     let i = 0;
@@ -190,58 +239,50 @@ Blockly.Blocks["combine_block"] = {
       i++;
     }
     // 라벨 + 값 슬롯
-    this.appendDummyInput().appendField("합치기");
+    if (!this.getInput("LABEL")) {
+      this.appendDummyInput("LABEL").appendField("합치기");
+    }
     for (let k = 0; k < this.itemCount_; k++) {
-      this.appendValueInput("ITEM" + k).appendField(k === 0 ? "재료/값" : "");
-    }
-  },
-  decompose(workspace) {
-    const container = workspace.newBlock("combine_container_block");
-    container.initSvg();
-    let connection = container.getInput("STACK").connection;
-    for (let i = 0; i < this.itemCount_; i++) {
-      const item = workspace.newBlock("combine_item_block");
-      item.initSvg();
-      connection.connect(item.previousConnection);
-      connection = item.nextConnection;
-    }
-    return container;
-  },
-  compose(containerBlock) {
-    let itemBlock = containerBlock.getInputTargetBlock("STACK");
-    const connections = [];
-    while (itemBlock) {
-      connections.push(itemBlock.valueConnection_);
-      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
-    }
-    this.itemCount_ = connections.length || 1;
-    this.updateShape_();
-    for (let i = 0; i < this.itemCount_; i++) {
-      if (connections[i]) {
-        this.getInput("ITEM" + i).connection.connect(connections[i]);
-      }
-    }
-  },
-  saveExtraState() {
-    return { itemCount: this.itemCount_ };
-  },
-  loadExtraState(state) {
-    this.itemCount_ = state?.itemCount ?? 2;
-    this.updateShape_();
-  },
-  saveConnections(containerBlock) {
-    let itemBlock = containerBlock.getInputTargetBlock("STACK");
-    let i = 0;
-    while (itemBlock) {
-      const input = this.getInput("ITEM" + i);
-      itemBlock.valueConnection_ = input && input.connection.targetConnection;
-      i++;
-      itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
+      const input = this.appendValueInput("ITEM" + k);
+      if (k === 0) input.appendField("재료/값");
     }
   },
 };
 
-/* 뮤테이터 UI 블록들 */
+// (헬퍼 없음)
+const COMBINE_MUTATOR_HELPERS = null;
+
+// 뮤테이터 등록 (Mutator 클래스 사용 안 함)
+Blockly.Extensions.registerMutator(
+  "combine_mutator",
+  COMBINE_MUTATOR_MIXIN,
+  COMBINE_MUTATOR_HELPERS,
+  ["combine_item_block"]
+);
+
+// 합치기 블록 (init 안에서 Extensions.apply로 적용)
+Blockly.Blocks["combine_block"] = {
+  init() {
+    this.setStyle("flow_blocks");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    // 기본 상태
+    this.itemCount_ = 2;
+    this.updateShape_();
+    // 🔥 Mutator 클래스 없이 이름으로 적용
+    Blockly.Extensions.apply("combine_mutator", this, false);
+    this.setTooltip("여러 재료/중간 결과를 하나로 합칩니다.");
+  },
+  // 믹스인이 기대하는 메서드 그대로 사용
+  mutationToDom: COMBINE_MUTATOR_MIXIN.mutationToDom,
+  domToMutation: COMBINE_MUTATOR_MIXIN.domToMutation,
+  decompose: COMBINE_MUTATOR_MIXIN.decompose,
+  compose: COMBINE_MUTATOR_MIXIN.compose,
+  saveConnections: COMBINE_MUTATOR_MIXIN.saveConnections,
+  updateShape_: COMBINE_MUTATOR_MIXIN.updateShape_,
+};
+
+// 뮤테이터 UI 블록들
 Blockly.Blocks["combine_container_block"] = {
   init() {
     this.setStyle("flow_blocks");
@@ -259,6 +300,7 @@ Blockly.Blocks["combine_item_block"] = {
     this.contextMenu = false;
   },
 };
+
 
 
 
