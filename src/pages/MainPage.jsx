@@ -9,6 +9,7 @@ import { saveRecipe, fetchRecipeDetail } from "../api/recipeApi";
 import BlocklyArea from "../components/BlocklyArea";
 import { CATEGORY_ORDER } from "../blockly/catalog";
 
+
 export default function MainPage() {
   const [activeTab, setActiveTab] = useState(CATEGORY_ORDER[0]);
 
@@ -284,6 +285,7 @@ export default function MainPage() {
     </div>
   );
 }
+
 
 
 
