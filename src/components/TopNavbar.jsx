@@ -1,3 +1,4 @@
+// src/components/TopNavbar.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import blockChefImage from "../assets/block_chef.png";
@@ -43,13 +44,27 @@ export default function TopNavbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ✅ 이동 전 확인: /main에서 작업중(블록 존재)일 때만 경고
+  const confirmLeaveIfDirty = () => {
+    const isMain = location.pathname.includes("/main");
+    const dirty = sessionStorage.getItem("blockchef:dirty") === "1";
+    if (isMain && dirty) {
+      return window.confirm(
+        "현재 작업중인 블록이 저장되지 않을 수 있습니다. 페이지를 이동하시겠습니까?"
+      );
+    }
+    return true;
+  };
+
   const handleTopNav = (target) => {
     setActiveMenu(target);
+    if (!confirmLeaveIfDirty()) return;
     if (target === "main") navigate("/main");
     else if (target === "my") navigate("/my-recipe");
   };
 
   const executeLogout = () => {
+    if (!confirmLeaveIfDirty()) return; // ✅ 로그아웃도 동일 정책
     localStorage.removeItem("token");
     alert("로그아웃되었습니다.");
     navigate("/signin");
@@ -94,6 +109,7 @@ export default function TopNavbar() {
               <div className="flex justify-around">
                 <button
                   onClick={() => {
+                    if (!confirmLeaveIfDirty()) return;
                     setShowProfileMenu(false);
                     navigate("/my-info");
                   }}
@@ -136,4 +152,5 @@ export default function TopNavbar() {
     </div>
   );
 }
+
 

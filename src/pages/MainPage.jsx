@@ -10,10 +10,8 @@ import BlocklyArea from "../components/BlocklyArea";
 import { CATEGORY_ORDER } from "../blockly/catalog";
 
 export default function MainPage() {
-  // 왼쪽 카테고리 버튼(팔레트 전환)
   const [activeTab, setActiveTab] = useState(CATEGORY_ORDER[0]);
 
-  // 저장 팝업/메타
   const [showSavePopup, setShowSavePopup] = useState(false);
   const [recipeId, setRecipeId] = useState(null);
   const [recipeTitle, setRecipeTitle] = useState("");
@@ -23,30 +21,30 @@ export default function MainPage() {
   const [titleError, setTitleError] = useState(false);
   const [tagsError, setTagsError] = useState(false);
 
-  // 작업영역에 블록이 하나라도 있는가?
-  const [hasBlocks, setHasBlocks] = useState(false);
-
   const navigate = useNavigate();
   const location = useLocation();
   const blocklyRef = useRef(null);
 
-  // 상세 진입 시(id 존재) 레시피 로드
+  // 상세 진입 시 로드
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
     if (id) loadRecipeDetail(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // 새 문서 시작 시에는 dirty 초기화
+    if (!id) sessionStorage.setItem("blockchef:dirty", "0");
   }, [location.search]);
 
   const loadRecipeDetail = async (id) => {
     try {
-      const data = await fetchRecipeDetail(id); // { _id, title, description, xml, tags }
+      const data = await fetchRecipeDetail(id); // {_id,title,description,xml,tags}
       setRecipeId(data._id || null);
       setRecipeTitle(data.title || "");
       setRecipeDescription(data.description || "");
       setTags((data.tags || []).map((t) => `#${t}`));
       const xml = data.xml || "";
       setRecipeXml(xml);
+      // 로드 직후는 저장 상태와 동일하게 취급 → dirty 0
+      sessionStorage.setItem("blockchef:dirty", "0");
       blocklyRef.current?.loadXml(xml);
     } catch (err) {
       console.error("레시피 불러오기 실패:", err);
@@ -63,6 +61,7 @@ export default function MainPage() {
     try {
       const xml = blocklyRef.current?.getXml() || recipeXml;
       const cleanedTags = tags.map((tag) => tag.replace(/^#/, ""));
+
       await saveRecipe({
         _id: recipeId,
         title: recipeTitle,
@@ -70,9 +69,11 @@ export default function MainPage() {
         tags: cleanedTags,
         xml,
       });
+
       alert("레시피가 저장되었습니다!");
       setShowSavePopup(false);
-      // 저장했다고 해서 hasBlocks를 false로 강제하지는 않음(유저가 계속 작업할 수 있으니)
+      // 저장 후 dirty 해제
+      sessionStorage.setItem("blockchef:dirty", "0");
     } catch (err) {
       console.error("저장 실패:", err);
       console.error("서버 응답 바디:", err.response?.data);
@@ -80,54 +81,20 @@ export default function MainPage() {
     }
   };
 
-  /* ---------------------------
-   * 네비게이션 가드 (요구사항 #1)
-   * - 작업영역에 블록이 1개라도 있으면, 내부 링크 클릭 시 확인 팝업
-   * - 새로고침/닫기에도 브라우저 기본 팝업
-   * --------------------------- */
-  useEffect(() => {
-    // 내부 링크/TopNavbar의 <Link>/<a> 클릭 가로채서 확인
-    const onDocClick = (e) => {
-      if (!hasBlocks) return;
-      const a = e.target.closest?.("a[href]");
-      if (!a) return;
-      const href = a.getAttribute("href");
-      if (!href) return;
-
-      // 내부 라우팅만 가드(외부 URL은 제외)
-      const isExternal = /^https?:\/\//i.test(href) && !href.startsWith(window.location.origin);
-      if (isExternal) return;
-
-      // 카테고리 버튼은 / 경로 이동이 아니니 무시
-      // (TopNavbar의 '레시피 만들기', '나의 레시피', '내정보' 같은 내부 링크만 막힘)
-      const ok = window.confirm("저장하지 않은 블록이 있습니다. 이동하시겠습니까?");
-      if (!ok) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    document.addEventListener("click", onDocClick, true);
-    return () => document.removeEventListener("click", onDocClick, true);
-  }, [hasBlocks]);
-
-  // 새로고침/닫기 방지
-  useEffect(() => {
-    const beforeUnload = (e) => {
-      if (!hasBlocks) return;
-      e.preventDefault();
-      e.returnValue = ""; // 크롬/사파리 규격
-    };
-    window.addEventListener("beforeunload", beforeUnload);
-    return () => window.removeEventListener("beforeunload", beforeUnload);
-  }, [hasBlocks]);
+  // onXmlChange: XML 스냅샷 갱신 + dirty 플래그
+  const handleXmlChange = (xml) => {
+    setRecipeXml(xml);
+    const hasBlock = typeof xml === "string" && xml.includes("<block");
+    sessionStorage.setItem("blockchef:dirty", hasBlock ? "1" : "0");
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      {/* ✅ TopNavbar는 내부에서 dirty 플래그(sessionStorage)를 보고 이동 전 확인창을 띄움 */}
       <TopNavbar />
 
       <div className="flex flex-row flex-1">
-        {/* ⬅️ 카테고리 버튼 (팔레트 전환 전용) */}
+        {/* 좌측 카테고리 버튼 */}
         <div className="w-[120px] border-r border-gray-200 p-2">
           {CATEGORY_ORDER.map((tab) => (
             <LoginButton
@@ -139,24 +106,21 @@ export default function MainPage() {
           ))}
         </div>
 
-        {/* ➡️ Blockly 워크스페이스 (팔레트 + 작업영역) */}
+        {/* Blockly 영역 */}
         <div className="flex-1 bg-gray-100 relative">
           <div className="absolute inset-4 border-2 border-gray-300 bg-white rounded-xl overflow-hidden">
             <BlocklyArea
               ref={blocklyRef}
               initialXml={recipeXml}
-              onXmlChange={(xml) => {
-                setRecipeXml(xml);
-                // xml 문자열 검사 + 실제 블록 존재 여부 둘 다 안전하게 체크
-                const has = blocklyRef.current?.hasAnyBlocks?.() || (xml && xml.includes("<block"));
-                setHasBlocks(!!has);
-              }}
-              onDirtyChange={(flag) => setHasBlocks(!!flag)}
+              onXmlChange={handleXmlChange}
               activeCategory={activeTab}
             />
 
-            {/* ⬅⬅ 버튼 묶음을 "작업영역 왼쪽 하단"에 가로 정렬로 배치 */}
-            <div className="absolute bottom-3 left-4 flex items-center gap-4 z-10">
+            {/* ✅ 툴버튼: 작업영역 안 "좌하단", 좌→우로 배치. 기존 디자인 유지 */}
+            <div
+              className="absolute flex items-center gap-4"
+              style={{ left: 12, bottom: 12 }}
+            >
               <ChevronLeft
                 className="text-orange-400 cursor-pointer"
                 title="되돌리기"
@@ -173,13 +137,14 @@ export default function MainPage() {
                 onClick={() => {
                   if (window.confirm("현재 레시피 블록을 모두 지울까요?")) {
                     blocklyRef.current?.clear();
+                    sessionStorage.setItem("blockchef:dirty", "0");
                   }
                 }}
               />
               <Save
                 className="text-orange-400 cursor-pointer"
-                onClick={() => setShowSavePopup(true)}
                 title="저장"
+                onClick={() => setShowSavePopup(true)}
               />
             </div>
           </div>
