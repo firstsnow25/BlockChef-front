@@ -56,7 +56,7 @@ function makeToolboxJson(activeCategory) {
   return { kind: "flyoutToolbox", contents: safeToolboxContents(entries) };
 }
 
-/* ✅ 안전 XML 파서: Xml → utils.xml → DOMParser 순서로 폴백 */
+/* 안전 XML 파서 */
 function toDom(xmlMaybe) {
   const xmlStr =
     typeof xmlMaybe === "string"
@@ -64,24 +64,15 @@ function toDom(xmlMaybe) {
       : typeof xmlMaybe === "object"
       ? new XMLSerializer().serializeToString(xmlMaybe)
       : "";
-
   if (!xmlStr) return null;
-
-  try {
-    if (Blockly.Xml?.textToDom) return Blockly.Xml.textToDom(xmlStr);
-  } catch {}
-  try {
-    if (Blockly.utils?.xml?.textToDom) return Blockly.utils.xml.textToDom(xmlStr);
-  } catch {}
-  try {
-    const doc = new DOMParser().parseFromString(xmlStr, "text/xml");
-    return doc.documentElement;
-  } catch {}
+  try { if (Blockly.Xml?.textToDom) return Blockly.Xml.textToDom(xmlStr); } catch {}
+  try { if (Blockly.utils?.xml?.textToDom) return Blockly.utils.xml.textToDom(xmlStr); } catch {}
+  try { return new DOMParser().parseFromString(xmlStr, "text/xml").documentElement; } catch {}
   return null;
 }
 
 const BlocklyArea = forwardRef(function BlocklyArea(
-  { initialXml = "", onXmlChange, activeCategory = CATEGORY_ORDER[0] },
+  { initialXml = "", onXmlChange, onDirtyChange, activeCategory = CATEGORY_ORDER[0] },
   ref
 ) {
   const hostRef = useRef(null);
@@ -103,12 +94,12 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       trashcan: true,
       grid: { spacing: 20, length: 3, colour: "#eeeeee", snap: true },
       zoom: { controls: true, wheel: true, startScale: 1, maxScale: 2, minScale: 0.4, pinch: true },
-      move: { scrollbars: { horizontal: false, vertical: true }, drag: true, wheel: true }, // ⬅ 가로 스크롤 제거
+      move: { scrollbars: { horizontal: false, vertical: true }, drag: true, wheel: true }, // 가로 스크롤 제거
       sounds: false,
     });
     workspaceRef.current = ws;
 
-    // ✅ 초기 XML 로드 (안전 파서 사용)
+    // 초기 XML 로드
     if (initialXml) {
       try {
         const dom = toDom(initialXml);
@@ -152,11 +143,9 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       if (ev.type !== Blockly.Events.BLOCK_DRAG) return;
       const b = ws.getBlockById(ev.blockId);
       if (!b || b.isShadow()) return;
-
       const f = ws.getFlyout?.();
       const flyoutWidth = f?.getWidth ? f.getWidth() : 0;
       const minX = Math.max(0, flyoutWidth - 90 + PALETTE_MARGIN);
-
       if (ev.isStart) {
         const start = b.getRelativeToSurfaceXY();
         dragStartPosRef.current.set(ev.blockId, { x: start.x, y: start.y });
@@ -172,16 +161,16 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(onDrag);
 
-    // 변경 → XML 반영
+    // 변경 → XML 반영 + dirty 통지
     let rafId = null;
     changeListenerRef.current = () => {
-      if (!onXmlChange) return;
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         try {
           const dom = Blockly.Xml.workspaceToDom(ws);
           const xml = Blockly.Xml.domToText(dom);
-          onXmlChange(xml);
+          onXmlChange?.(xml);
+          onDirtyChange?.(ws.getTopBlocks(false).length > 0);
         } catch {}
       });
     };
@@ -195,15 +184,15 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       ro.disconnect();
       workspaceRef.current = null;
     };
-  }, []); // 1회
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount once
 
   // 카테고리 전환 시 팔레트 교체
   useEffect(() => {
     const ws = workspaceRef.current;
     if (!ws) return;
     const tb = makeToolboxJson(activeCategory);
-
-    let raf = requestAnimationFrame(() => {
+    const raf = requestAnimationFrame(() => {
       const flyout = ws.getFlyout?.();
       try { flyout?.setVisible?.(false); } catch {}
       ws.updateToolbox(tb);
@@ -233,7 +222,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       ws.clear();
       if (!xmlText) return;
       try {
-        const dom = toDom(xmlText);        // ✅ 안전 파서 사용
+        const dom = toDom(xmlText);
         if (dom) Blockly.Xml.domToWorkspace(dom, ws);
       } catch (e) {
         console.error("XML 불러오기 실패:", e);
@@ -242,6 +231,11 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     clear() { workspaceRef.current?.clear(); },
     undo() { workspaceRef.current && Blockly.Events.UndoRedo.undo(workspaceRef.current); },
     redo() { workspaceRef.current && Blockly.Events.UndoRedo.redo(workspaceRef.current); },
+    hasAnyBlocks() {
+      const ws = workspaceRef.current;
+      if (!ws) return false;
+      return ws.getTopBlocks(false).length > 0;
+    },
   }));
 
   return (
@@ -258,7 +252,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
-
 
 
 
