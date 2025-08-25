@@ -229,8 +229,8 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       }
     },
     clear() { workspaceRef.current?.clear(); },
-    undo() { workspaceRef.current && Blockly.Events.UndoRedo.undo(workspaceRef.current); },
-    redo() { workspaceRef.current && Blockly.Events.UndoRedo.redo(workspaceRef.current); },
+    undo() { const ws = workspaceRef.current; if (ws?.undo) ws.undo(false); }, // 되돌리기
+    redo() { const ws = workspaceRef.current; if (ws?.undo) ws.undo(true); },  // 다시하기
     hasAnyBlocks() {
       const ws = workspaceRef.current;
       if (!ws) return false;
@@ -252,6 +252,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
+
 
 
 
