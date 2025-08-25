@@ -10,16 +10,14 @@ import BlocklyArea from "../components/BlocklyArea";
 import { CATEGORY_ORDER } from "../blockly/catalog";
 
 export default function MainPage() {
-  // 팔레트 카테고리
   const [activeTab, setActiveTab] = useState(CATEGORY_ORDER[0]);
 
-  // 저장 팝업/메타
   const [showSavePopup, setShowSavePopup] = useState(false);
-  const [recipeId, setRecipeId] = useState(null); // 수정 시 사용(_id)
+  const [recipeId, setRecipeId] = useState(null);
   const [recipeTitle, setRecipeTitle] = useState("");
   const [recipeDescription, setRecipeDescription] = useState("");
   const [tags, setTags] = useState([]);
-  const [recipeXml, setRecipeXml] = useState(""); // 워크스페이스 XML 스냅샷
+  const [recipeXml, setRecipeXml] = useState("");
   const [titleError, setTitleError] = useState(false);
   const [tagsError, setTagsError] = useState(false);
 
@@ -27,67 +25,59 @@ export default function MainPage() {
   const location = useLocation();
   const blocklyRef = useRef(null);
 
-  // 상세 진입 시(id 존재) 레시피 로드
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
     if (id) loadRecipeDetail(id);
+    if (!id) sessionStorage.setItem("blockchef:dirty", "0");
   }, [location.search]);
 
   const loadRecipeDetail = async (id) => {
     try {
-      // api/recipeApi.js에서 정규화: { _id, title, description, xml, tags }
-      const data = await fetchRecipeDetail(id);
+      const data = await fetchRecipeDetail(id); // {_id,title,description,xml,tags}
       setRecipeId(data._id || null);
       setRecipeTitle(data.title || "");
       setRecipeDescription(data.description || "");
       setTags((data.tags || []).map((t) => `#${t}`));
       const xml = data.xml || "";
       setRecipeXml(xml);
+      sessionStorage.setItem("blockchef:dirty", "0"); // 로드 직후는 깨끗한 상태
       blocklyRef.current?.loadXml(xml);
-      // 처음 로드한 상태는 dirty 아님
-      sessionStorage.setItem("blockchef:dirty", "false");
     } catch (err) {
       console.error("레시피 불러오기 실패:", err);
-      console.error("서버 응답 바디:", err?.response?.data);
+      console.error("서버 응답 바디:", err.response?.data);
       alert("레시피 불러오기에 실패했습니다.");
     }
-  };
-
-  // XML 스냅샷 업데이트 + dirty 표시 (TopNavbar가 이 값을 보고 confirm 띄움)
-  const handleWorkspaceXmlChange = (xml) => {
-    setRecipeXml(xml);
-    const hasAnyBlock = xml?.includes("<block");
-    sessionStorage.setItem("blockchef:dirty", hasAnyBlock ? "true" : "false");
   };
 
   const handleSave = async () => {
     setTitleError(!recipeTitle.trim());
     setTagsError(tags.length === 0);
     if (!recipeTitle.trim() || tags.length === 0) return;
-
     try {
       const xml = blocklyRef.current?.getXml() || recipeXml;
       const cleanedTags = tags.map((tag) => tag.replace(/^#/, ""));
-
       await saveRecipe({
-        _id: recipeId, // 있으면 수정, 없으면 신규
+        _id: recipeId,
         title: recipeTitle,
         description: recipeDescription,
         tags: cleanedTags,
-        xml, // api 레이어에서 blockStructure로 매핑
+        xml,
       });
-
-      // 저장 성공 → dirty 해제
-      sessionStorage.setItem("blockchef:dirty", "false");
-
       alert("레시피가 저장되었습니다!");
       setShowSavePopup(false);
+      sessionStorage.setItem("blockchef:dirty", "0");
     } catch (err) {
       console.error("저장 실패:", err);
-      console.error("서버 응답 바디:", err?.response?.data);
+      console.error("서버 응답 바디:", err.response?.data);
       alert("레시피 저장 중 오류가 발생했습니다.");
     }
+  };
+
+  const handleXmlChange = (xml) => {
+    setRecipeXml(xml);
+    const hasBlock = typeof xml === "string" && xml.includes("<block");
+    sessionStorage.setItem("blockchef:dirty", hasBlock ? "1" : "0");
   };
 
   return (
@@ -95,7 +85,7 @@ export default function MainPage() {
       <TopNavbar />
 
       <div className="flex flex-row flex-1">
-        {/* ⬅️ 카테고리 버튼 */}
+        {/* 좌측 카테고리 버튼 */}
         <div className="w-[120px] border-r border-gray-200 p-2">
           {CATEGORY_ORDER.map((tab) => (
             <LoginButton
@@ -107,11 +97,11 @@ export default function MainPage() {
           ))}
         </div>
 
-        {/* ➡️ Blockly 워크스페이스 */}
+        {/* Blockly 영역 */}
         <div className="flex-1 bg-gray-100 relative">
           <div className="absolute inset-4 border-2 border-gray-300 bg-white rounded-xl overflow-hidden">
-            {/* ▶ 작업영역 오른쪽 상단 툴바 (가로/원래 아이콘/색) */}
-            <div className="absolute top-3 right-3 z-10 flex gap-4 items-center">
+            {/* ▶ 우측 상단 툴바 (가로 정렬 / 기존 아이콘/색 유지) */}
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-4">
               <ChevronLeft
                 className="text-orange-400 cursor-pointer"
                 title="되돌리기"
@@ -128,22 +118,21 @@ export default function MainPage() {
                 onClick={() => {
                   if (window.confirm("현재 레시피 블록을 모두 지울까요?")) {
                     blocklyRef.current?.clear();
-                    // 비운 뒤 dirty 해제
-                    sessionStorage.setItem("blockchef:dirty", "false");
+                    sessionStorage.setItem("blockchef:dirty", "0");
                   }
                 }}
               />
               <Save
                 className="text-orange-400 cursor-pointer"
-                onClick={() => setShowSavePopup(true)}
                 title="저장"
+                onClick={() => setShowSavePopup(true)}
               />
             </div>
 
             <BlocklyArea
               ref={blocklyRef}
               initialXml={recipeXml}
-              onXmlChange={handleWorkspaceXmlChange}
+              onXmlChange={handleXmlChange}
               activeCategory={activeTab}
             />
           </div>
@@ -185,6 +174,8 @@ export default function MainPage() {
     </div>
   );
 }
+
+
 
 
 
