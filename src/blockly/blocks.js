@@ -3,6 +3,12 @@ import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
+// ✅ 각진 플러그 상수 안전 폴백 (환경별 export 차이 흡수)
+const OUTPUT_SHAPE_SQUARE =
+  (Blockly && Blockly.OUTPUT_SHAPE_SQUARE) ||
+  (Blockly && Blockly.Constants && Blockly.Constants.SHAPES && Blockly.Constants.SHAPES.SQUARE) ||
+  1; // 0: round, 1: square, 2: hex (버전에 따라)
+  
 /** ===== 공통 ===== */
 const INGREDIENT_NAMES = [
   "감자","고추","대파","당근","라면사리","라면스프","달걀","물","소금","양파"
@@ -51,9 +57,8 @@ INGREDIENT_NAMES.forEach((name) => {
       // 테마/스타일 유지
       this.setStyle("ingredient_blocks");
 
-      // ✅ 각진 플러그(Blockly v10+). 구버전 호환 위해 존재 체크.
-      if (this.setOutputShape && Blockly.OUTPUT_SHAPE_SQUARE) {
-        this.setOutputShape(Blockly.OUTPUT_SHAPE_SQUARE);
+      if (typeof this.setOutputShape === "function") {
+        try { this.setOutputShape(OUTPUT_SHAPE_SQUARE); } catch {}
       }
 
       // semantics에서 사용할 메타(재료 feature)
@@ -267,6 +272,7 @@ Blockly.Extensions.registerMutator(
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
+
 
 
 
