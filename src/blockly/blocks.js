@@ -1,20 +1,33 @@
-// src/blockly/blocks.js
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
 /**
- * BlockChef 커스텀 블록 모음 (HTML 데모 정의 이식)
- * - v12 대응: Mutator 클래스를 직접 import 하지 않고 registerMutator 사용
- * - 스타일: ingredient_blocks / action_blocks / flow_blocks (BlocklyArea의 BlockChefTheme와 매칭)
+ * BlockChef 커스텀 블록들
+ * - 스타일: ingredient_blocks / action_blocks / flow_blocks
  */
 
 /* =========================
  * 공통 상수
  * ========================= */
 const INGREDIENT_NAMES = [
-  "감자", "당근", "양파", "달걀", "소금", "물", "라면사리", "라면스프", "대파", "고추",
+  "감자", "당근", "양파", "달걀", "소금", "물",
+  "라면사리", "라면스프", "대파", "고추",
 ];
+
+// ✅ 재료별 feature 태그(코어4종 중심)
+const FEATURE_BY_ING = {
+  감자: ["solid"],
+  당근: ["solid"],
+  양파: ["solid"],
+  달걀: ["solid"],        // 필요 시 'egg' 추가 가능
+  소금: ["powder"],
+  물: ["liquid"],
+  라면사리: ["solid", "noodle"],
+  라면스프: ["powder"],
+  대파: ["solid", "leafy"],
+  고추: ["solid"],
+};
 
 const ACTION_LABELS = {
   slice: "썰기",
@@ -57,7 +70,7 @@ Blockly.Blocks["finish_block"] = {
 
 /* =========================
  * 재료: 이름 블록 + 구성 블록
- *  - ingredient_name_감자 ... (값 블록)
+ *  - ingredient_name_감자 ... (값 블록, ✅ data에 features 저장)
  *  - ingredient_block: (재료 이름 값) + 양 + 단위 → 값 블록
  * ========================= */
 INGREDIENT_NAMES.forEach((name) => {
@@ -67,6 +80,10 @@ INGREDIENT_NAMES.forEach((name) => {
       this.setOutput(true, null);
       this.setStyle("ingredient_blocks");
       this.setTooltip("재료 이름");
+
+      // ✅ semantics가 읽을 features 메타 (문자열화)
+      const feats = FEATURE_BY_ING[name] || ["solid"];
+      this.data = JSON.stringify({ features: feats });
     },
   };
 });
@@ -94,8 +111,6 @@ Blockly.Blocks["ingredient_block"] = {
 
 /* =========================
  * 동작: 단계(Statement) + 값(Value) 버전
- *  - with time: *_block / *_value_block (시간 + 단위)
- *  - without time: *_block / *_value_block
  * ========================= */
 
 // 기다리기(시간만, statement)
@@ -124,7 +139,7 @@ Blockly.Blocks["wait_block"] = {
 ACTIONS_WITH_TIME.forEach((key) => {
   const label = ACTION_LABELS[key];
 
-  // statement 버전
+  // statement
   Blockly.Blocks[`${key}_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label);
@@ -146,7 +161,7 @@ ACTIONS_WITH_TIME.forEach((key) => {
     },
   };
 
-  // value 버전
+  // value
   Blockly.Blocks[`${key}_value_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label);
@@ -196,10 +211,6 @@ ACTIONS_WITHOUT_TIME.forEach((key) => {
 
 /* =========================
  * 흐름 제어
- *  - 반복 N회
- *  - 조건까지 반복
- *  - if (간단 입력형)
- *  - continue / break
  * ========================= */
 Blockly.Blocks["repeat_n_times"] = {
   init() {
@@ -263,11 +274,10 @@ Blockly.Blocks["break_block"] = {
 
 /* =========================
  * 합치기 (뮤테이터, value 블록)
- *  - combine_block: 입력 ITEM* 가변
  * ========================= */
 Blockly.Blocks["combine_block"] = {
   init() {
-    this.itemCount_ = 2; // 기본 2개
+    this.itemCount_ = 2;
     this.setOutput(true, null);
     this.setStyle("action_blocks");
     this.setMutator("combine_mutator");
@@ -322,20 +332,17 @@ Blockly.Blocks["combine_block"] = {
     }
   },
   updateShape_() {
-    // 기존 입력 제거
     let i = 0;
     while (this.getInput("ITEM" + i)) {
       this.removeInput("ITEM" + i);
       i++;
     }
-    // 새 입력 추가
     for (let k = 0; k < this.itemCount_; k++) {
       this.appendValueInput("ITEM" + k).appendField(k === 0 ? "합치기 재료" : "재료 추가");
     }
   },
 };
 
-// 뮤테이터 UI용 블록들
 Blockly.Blocks["combine_mutator_container"] = {
   init() {
     this.appendStatementInput("STACK").appendField("재료들");
@@ -351,7 +358,6 @@ Blockly.Blocks["combine_mutator_item"] = {
   },
 };
 
-// 뮤테이터 등록
 Blockly.Extensions.registerMutator(
   "combine_mutator",
   {
@@ -364,6 +370,7 @@ Blockly.Extensions.registerMutator(
   null,
   ["combine_mutator_item"]
 );
+
 
 /**
  * NOTE

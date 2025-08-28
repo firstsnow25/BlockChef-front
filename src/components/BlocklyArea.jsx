@@ -1,5 +1,5 @@
 // src/components/BlocklyArea.jsx
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import "blockly/msg/ko";
@@ -7,6 +7,7 @@ import "blockly/msg/ko";
 import "../blockly/blocks";
 import { CATALOG, CATEGORY_ORDER } from "../blockly/catalog";
 import "../blockly/blockly.css";
+import { installSemantics } from "../blockly/semantics";
 
 const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
   base: Blockly.Themes.Classic,
@@ -45,15 +46,33 @@ function safeToolboxContents(list) {
       kind: "block",
       type,
       fields: e.fields || {},
-      data: JSON.stringify({ lockFields: e.lockFields || [] }),
+      // NOTE: label은 툴박스 UI 노출엔 쓰지 않지만, 검색 필터링에 사용
+      // data는 여기서 넣지 않고, 각 블록 정의(especially ingredient_name_*)에서 this.data 지정
     });
   });
   return out;
 }
-function makeToolboxJson(activeCategory) {
+
+// activeCategory + 검색어로 entries 필터링
+function getFilteredEntries(activeCategory, query) {
   const key = activeCategory ?? CATEGORY_ORDER[0];
   const entries = CATALOG[key] ?? [];
-  return { kind: "flyoutToolbox", contents: safeToolboxContents(entries) };
+  const q = (query || "").trim();
+  if (!q) return entries;
+
+  const lower = q.toLowerCase();
+  return entries.filter((e) => {
+    const label = (e.label || e.type || e.template || "").toString();
+    return (
+      label.toLowerCase().includes(lower) ||
+      label.includes(q) // 한글 직접 포함
+    );
+  });
+}
+
+function makeToolboxJson(activeCategory, query) {
+  const filtered = getFilteredEntries(activeCategory, query);
+  return { kind: "flyoutToolbox", contents: safeToolboxContents(filtered) };
 }
 
 /* 안전 XML 파서 */
@@ -79,13 +98,14 @@ const BlocklyArea = forwardRef(function BlocklyArea(
   const workspaceRef = useRef(null);
   const changeListenerRef = useRef(null);
   const dragStartPosRef = useRef(new Map());
+  const [search, setSearch] = useState(""); // ✅ 팔레트 검색어
 
   useEffect(() => {
     if (!hostRef.current) return;
 
     const ws = Blockly.inject(hostRef.current, {
       theme: BlockChefTheme,
-      toolbox: makeToolboxJson(activeCategory),
+      toolbox: makeToolboxJson(activeCategory, search),
       renderer: "geras",
       toolboxPosition: "start",
       collapse: false,
@@ -98,6 +118,9 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       sounds: false,
     });
     workspaceRef.current = ws;
+
+    // ✅ semantics 설치 (연결 시 검증/토스트/차단)
+    installSemantics(ws);
 
     // 초기 XML 로드
     if (initialXml) {
@@ -187,11 +210,11 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount once
 
-  // 카테고리 전환 시 팔레트 교체
+  // 카테고리/검색어 전환 시 팔레트 교체
   useEffect(() => {
     const ws = workspaceRef.current;
     if (!ws) return;
-    const tb = makeToolboxJson(activeCategory);
+    const tb = makeToolboxJson(activeCategory, search);
     const raf = requestAnimationFrame(() => {
       const flyout = ws.getFlyout?.();
       try { flyout?.setVisible?.(false); } catch {}
@@ -206,7 +229,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       Blockly.svgResize(ws);
     });
     return () => cancelAnimationFrame(raf);
-  }, [activeCategory]);
+  }, [activeCategory, search]);
 
   // 외부 제어 API
   useImperativeHandle(ref, () => ({
@@ -229,14 +252,42 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       }
     },
     clear() { workspaceRef.current?.clear(); },
-    undo() { const ws = workspaceRef.current; if (ws?.undo) ws.undo(false); }, // 되돌리기
-    redo() { const ws = workspaceRef.current; if (ws?.undo) ws.undo(true); },  // 다시하기
+    undo() {
+      const ws = workspaceRef.current;
+      if (ws?.undo) ws.undo(false);
+    },
+    redo() {
+      const ws = workspaceRef.current;
+      if (ws?.undo) ws.undo(true);
+    },
     hasAnyBlocks() {
       const ws = workspaceRef.current;
       if (!ws) return false;
       return ws.getTopBlocks(false).length > 0;
     },
   }));
+
+  // ✅ 팔레트 검색 입력 UI (아주 얇게)
+  const SearchBox = () => (
+    <input
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      placeholder="검색 (예: 감자/볶기)"
+      style={{
+        position: "absolute",
+        left: 8,
+        top: 8,
+        width: 180,
+        zIndex: 10,
+        padding: "6px 8px",
+        border: "1px solid #ddd",
+        borderRadius: 8,
+        fontSize: 12,
+        background: "rgba(255,255,255,0.95)",
+        outline: "none",
+      }}
+    />
+  );
 
   return (
     <div
@@ -247,7 +298,10 @@ const BlocklyArea = forwardRef(function BlocklyArea(
         position: "relative",
         overflow: "hidden",
       }}
-    />
+    >
+      {/* 팔레트가 좌측이므로 좌상단에만 얇게 표시 */}
+      <SearchBox />
+    </div>
   );
 });
 
