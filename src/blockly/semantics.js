@@ -1,4 +1,6 @@
 // src/blockly/semantics.js
+import * as Blockly from "blockly";
+
 export function installSemantics(workspace) {
   const showToast = (msg) => {
     let el = document.getElementById("blockchef-toast");
@@ -102,4 +104,5 @@ export function installSemantics(workspace) {
     }
   });
 }
+
 
