@@ -74,24 +74,21 @@ Blockly.Blocks["finish_block"] = {
 INGREDIENT_NAMES.forEach((name) => {
   Blockly.Blocks[`ingredient_name_${name}`] = {
     init() {
-      this.appendDummyInput().appendField(name);
+      // ■ 기호로 시각 보조 (사용자 인지 강화)
+      this.appendDummyInput().appendField("■ ").appendField(name);
+
       this.setOutput(true, "ING_NAME");
       this.setStyle("ingredient_blocks");
 
-      // ✅ 각진 플러그(런타임 안전 체크)
       if (typeof this.setOutputShape === "function") {
-        try {
-          this.setOutputShape(OUTPUT_SHAPE_SQUARE);
-        } catch {}
+        try { this.setOutputShape(OUTPUT_SHAPE_SQUARE); } catch {}
       }
 
-      // semantics.js 에서 사용할 메타
       this.data = JSON.stringify({
         name,
         features: FEATURE_BY_ING[name] || ["solid"],
       });
-
-      this.setTooltip("재료 이름");
+      this.setTooltip("재료 이름 (계량 블록에만 연결)");
     },
   };
 });
@@ -391,8 +388,6 @@ Blockly.Extensions.registerMutator(
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
-
-
 
 
 
