@@ -1,6 +1,6 @@
 // src/components/BlocklyArea.jsx
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import * as Blockly from "blockly/core";
+import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 

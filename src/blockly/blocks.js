@@ -1,5 +1,5 @@
 // src/blockly/blocks.js
-import * as Blockly from "blockly/core";
+import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
