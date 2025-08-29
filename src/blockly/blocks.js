@@ -1,24 +1,22 @@
-// src/blockly/blocks.js
 import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
 /** =========================
- * 재료(ING_NAME) 목록 & 분류
- *  - 분류: solid | liquid | oil | powder
+ * 재료 메타 (features 갱신: solid/liquid/oil/powder)
  * ========================= */
 const INGREDIENT_NAMES = [
-  "간장",
-  "김가루",
-  "김밥용 단무지",
   "김치",
-  "물",
-  "밥",
-  "버터",
-  "소금",
   "식용유",
+  "밥",
+  "간장",
+  "버터",
   "라면사리",
   "라면스프",
+  "물",
+  "소금",
+  "김가루",
+  "김밥용 단무지",
 ].sort((a, b) => a.localeCompare(b, "ko-KR"));
 
 const FEATURE_BY_ING = {
@@ -36,24 +34,24 @@ const FEATURE_BY_ING = {
 };
 
 /** =========================
- * 동작 라벨
+ * 라벨(한국어)
  * ========================= */
 const ACTION_LABELS = {
-  slice: "자르기",   // required: solid ; unrequired: liquid, powder, oil
-  fry: "볶기",      // required: oil & (solid|powder) ; unrequired: liquid
-  mix: "섞기",      // required: 2+ ingredients
-  put: "넣기",      // any
-  boil: "끓이기",   // required: liquid
-  grind: "갈기",    // required: solid ; unrequired: powder
-  simmer: "삶기",   // required: liquid & solid
+  slice: "자르기",
+  grind: "갈기",
+  put: "넣기",
+  mix: "섞기",
+  fry: "볶기",
+  boil: "끓이기",
+  simmer: "삶기",
   wait: "기다리기",
 };
 
-const ACTIONS_WITH_TIME = ["fry", "boil", "simmer", "mix"];
+const ACTIONS_WITH_TIME = ["mix", "fry", "boil", "simmer"];
 const ACTIONS_WITHOUT_TIME = ["slice", "put", "grind"];
 
 /** =========================
- * 흐름: 시작/완료
+ * 시작/완료
  * ========================= */
 Blockly.Blocks["start_block"] = {
   init() {
@@ -72,7 +70,7 @@ Blockly.Blocks["finish_block"] = {
 
 /** =========================
  * 재료 이름 블록 (ING_NAME)
- *  - 커스텀 렌더러가 사각형 출력 이음새(ING_NAME) 처리
+ *  - 계량 블록에서만 사용
  * ========================= */
 INGREDIENT_NAMES.forEach((name) => {
   Blockly.Blocks[`ingredient_name_${name}`] = {
@@ -84,14 +82,14 @@ INGREDIENT_NAMES.forEach((name) => {
         name,
         features: FEATURE_BY_ING[name] || ["solid"],
       });
-      this.setTooltip("재료 이름 (먼저 '재료' 블록에 넣어 사용)");
+      this.setTooltip("재료 이름 (먼저 ‘재료’ 블록에 넣으세요)");
     },
   };
 });
 
 /** =========================
  * 재료 계량 블록 (ING)
- *  - NAME: ING_NAME만 허용
+ *  - NAME: ING_NAME만
  *  - 출력: ING
  * ========================= */
 Blockly.Blocks["ingredient_block"] = {
@@ -116,11 +114,10 @@ Blockly.Blocks["ingredient_block"] = {
 };
 
 /** =========================
- * 동작 블록
- *  - 모든 ITEM 입력: ING만 허용
+ * 동작 (Statement & Value)
+ *  - 모든 동작의 값 입력 이름을 'ITEM'으로 통일 (중요!)
+ *  - 값 버전은 출력도 'ING'
  * ========================= */
-
-// 기다리기 (statement)
 Blockly.Blocks["wait_block"] = {
   init() {
     this.appendDummyInput()
@@ -141,10 +138,9 @@ Blockly.Blocks["wait_block"] = {
   },
 };
 
-// 시간 있는 동작들 (statement/value 쌍)
-ACTIONS_WITH_TIME.forEach((key) => {
+function defineActionWithTime(key) {
   const label = ACTION_LABELS[key];
-
+  // statement
   Blockly.Blocks[`${key}_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
@@ -164,7 +160,7 @@ ACTIONS_WITH_TIME.forEach((key) => {
       this.setStyle("action_blocks");
     },
   };
-
+  // value
   Blockly.Blocks[`${key}_value_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
@@ -183,12 +179,12 @@ ACTIONS_WITH_TIME.forEach((key) => {
       this.setStyle("action_blocks");
     },
   };
-});
+}
+ACTIONS_WITH_TIME.forEach(defineActionWithTime);
 
-// 시간 없는 동작들 (statement/value 쌍)
-ACTIONS_WITHOUT_TIME.forEach((key) => {
+function defineActionNoTime(key) {
   const label = ACTION_LABELS[key];
-
+  // statement
   Blockly.Blocks[`${key}_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
@@ -197,7 +193,7 @@ ACTIONS_WITHOUT_TIME.forEach((key) => {
       this.setStyle("action_blocks");
     },
   };
-
+  // value
   Blockly.Blocks[`${key}_value_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
@@ -205,11 +201,11 @@ ACTIONS_WITHOUT_TIME.forEach((key) => {
       this.setStyle("action_blocks");
     },
   };
-});
+}
+ACTIONS_WITHOUT_TIME.forEach(defineActionNoTime);
 
 /** =========================
- * 합치기(value): 여러 재료를 하나의 ING로
- *  - mix 같은 곳에서 2개 이상 요구 시 사용
+ * 합치기 (ING, 가변 입력)
  * ========================= */
 Blockly.Blocks["combine_block"] = {
   init() {
@@ -218,7 +214,7 @@ Blockly.Blocks["combine_block"] = {
     this.setStyle("action_blocks");
     this.setMutator("combine_mutator");
     this.updateShape_();
-    this.setTooltip("여러 재료를 합칩니다.");
+    this.setTooltip("재료를 합칩니다. (섞기/볶기 등에서 2개 이상 입력 용도)");
   },
   mutationToDom() {
     const m = document.createElement("mutation");
@@ -306,6 +302,7 @@ Blockly.Extensions.registerMutator(
   null,
   ["combine_mutator_item"]
 );
+
 
 
 /**
