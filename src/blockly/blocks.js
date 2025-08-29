@@ -212,7 +212,13 @@ Blockly.Blocks["combine_block"] = {
     this.itemCount_ = 2;
     this.setOutput(true, "ING");
     this.setStyle("action_blocks");
-    this.setMutator(new (Blockly.icons?.Mutator || Blockly.Mutator)(["combine_mutator_item"]));
+    const MutatorIcon = Blockly.icons && Blockly.icons.Mutator;
+    if (MutatorIcon) {
+      this.setMutator(new MutatorIcon(["combine_mutator_item"]));
+    } else {
+      // (아주 드문 케이스) 아이콘 클래스가 노출되지 않는 빌드일 때
+      console.warn("Blockly.icons.Mutator not found; mutator icon will be omitted.");
+    }
     this.updateShape_();
     this.setTooltip("재료를 합칩니다. (섞기/볶기 등에서 2개 이상 입력 용도)");
   },
