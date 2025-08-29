@@ -1,15 +1,15 @@
-// 커스텀 렌더러: ING_NAME 값-입력 연결만 "정사각 탭"으로 보이게
+// 정사각 슬롯: ING_NAME 값-입력만 각지게 (나머지는 기존 geras 그대로)
 import * as Blockly from "blockly/core";
 
-// 1) 상수 공급자: 정사각 탭 도형 정의 + shapeFor 커스터마이즈
-class ChefConstants extends Blockly.blockRendering.ConstantProvider {
+// ✅ Geras 전용 상수 공급자 상속 (예전 오류 원인 해결 포인트)
+class ChefGerasConstants extends Blockly.geras.ConstantProvider {
   constructor() {
     super();
-    // 정사각 슬롯 크기(원하는 값으로 조정)
-    this.SQUARE_TAB_WIDTH = 14;
-    this.SQUARE_TAB_HEIGHT = 14;
+    // 정사각 슬롯 크기: geras 기본 탭 치수 기반으로 통일감 유지
+    this.SQUARE_TAB_WIDTH = this.TAB_WIDTH;   // 보통 8~16
+    this.SQUARE_TAB_HEIGHT = this.TAB_HEIGHT; // 보통 8~16
 
-    // 기본 퍼즐탭 대신 “평평한 위/아래 경로”를 주면 슬롯이 네모로 보입니다.
+    // 도형 객체(위/아래 경계선을 평평한 선으로) — 사각형 슬롯
     this.SQUARE_TAB = this.makeSquareTab_();
   }
 
@@ -18,7 +18,8 @@ class ChefConstants extends Blockly.blockRendering.ConstantProvider {
     const h = this.SQUARE_TAB_HEIGHT;
     const half = h / 2;
 
-    // MDN/Blockly 가이드 방식: pathUp / pathDown 은 탭의 위·아래 경계선만 그립니다.
+    // pathUp / pathDown 은 슬롯의 위/아래 “직선”만 그리면 됩니다.
+    // 좌우(직각 모서리)는 블록 외곽 경로에서 자동으로 붙습니다.
     const up = Blockly.utils.svgPaths.line([
       Blockly.utils.svgPaths.point(-w, -half),
       Blockly.utils.svgPaths.point(+w, -half),
@@ -29,7 +30,7 @@ class ChefConstants extends Blockly.blockRendering.ConstantProvider {
     ]);
 
     return {
-      type: this.SHAPES.PUZZLE, // 퍼즐 탭 타입 그대로 사용
+      type: this.SHAPES.PUZZLE, // 퍼즐 탭 타입 유지(연결 로직은 그대로)
       width: w,
       height: h,
       pathUp: up,
@@ -37,14 +38,13 @@ class ChefConstants extends Blockly.blockRendering.ConstantProvider {
     };
   }
 
-  // ✅ 특정 체크(ING_NAME)를 쓰는 “값 입력” 연결만 정사각 탭 적용
+  // ✅ ING_NAME 체크를 쓰는 “값-입력”만 네모 슬롯으로
   shapeFor(connection) {
     let check = connection.getCheck();
     if (!check && connection.targetConnection) {
       check = connection.targetConnection.getCheck();
     }
 
-    // 재료계량 NAME 입력은 setCheck("ING_NAME") 이므로 여기로 매칭됨
     if (check && check.includes("ING_NAME")) {
       return this.SQUARE_TAB;
     }
@@ -52,15 +52,17 @@ class ChefConstants extends Blockly.blockRendering.ConstantProvider {
   }
 }
 
-// 2) Geras 기반 렌더러 등록(겉모습 그대로 유지하면서 상수만 교체)
-class ChefRenderer extends Blockly.geras.Renderer {
+// ✅ Geras 기반 렌더러: 상수만 교체
+class ChefGerasRenderer extends Blockly.geras.Renderer {
   makeConstants_() {
-    return new ChefConstants();
+    return new ChefGerasConstants();
   }
 }
 
-// 전역 등록: inject({ renderer: "chef_geras" }) 로 사용
-Blockly.blockRendering.register("chef_geras", ChefRenderer);
+// 전역 등록 → inject({ renderer: "chef_geras" })
+Blockly.blockRendering.register("chef_geras", ChefGerasRenderer);
+
+
 
 
 
