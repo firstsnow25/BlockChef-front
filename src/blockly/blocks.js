@@ -3,8 +3,7 @@ import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
-const CONNECTION_SHAPE_SQUARE =
-  (Blockly.ConnectionShape && Blockly.ConnectionShape.SQUARE) || 1; // (0: round, 1: square, 2: hex)
+const CONNECTION_SHAPE_SQUARE = 1; // 0=round, 1=square, 2=hex
 
 /** ===== 공통 상수 ===== */
 const INGREDIENT_NAMES = [
@@ -50,8 +49,8 @@ INGREDIENT_NAMES.forEach((name) => {
       this.setOutput(true, "ING_NAME");
       this.setStyle("ingredient_blocks");
 
-      // ✅ 출력 커넥션(이음새)만 네모로
-      if (this.outputConnection && this.outputConnection.setShape) {
+      // ✅ 출력 커넥션 이음새를 사각으로
+      if (this.outputConnection?.setShape) {
         this.outputConnection.setShape(CONNECTION_SHAPE_SQUARE);
       }
 
@@ -65,13 +64,12 @@ INGREDIENT_NAMES.forEach((name) => {
 /** ===== 재료 계량 블록 ===== */
 Blockly.Blocks["ingredient_block"] = {
   init() {
-    const nameInput = this
-      .appendValueInput("NAME")
+    const nameInput = this.appendValueInput("NAME")
       .appendField("재료")
-      .setCheck("ING_NAME"); // 오직 재료-이름만
+      .setCheck("ING_NAME"); // 재료 이름만 허용
 
-    // ✅ NAME ‘입력’ 커넥션(이음새)만 네모로
-    if (nameInput.connection && nameInput.connection.setShape) {
+    // ✅ NAME 입력 이음새를 사각으로
+    if (nameInput.connection?.setShape) {
       nameInput.connection.setShape(CONNECTION_SHAPE_SQUARE);
     }
 
@@ -80,7 +78,7 @@ Blockly.Blocks["ingredient_block"] = {
       .appendField(new Blockly.FieldNumber(1, 1), "QUANTITY")
       .appendField(new Blockly.FieldDropdown([["개","개"],["컵","컵"],["리터","리터"],["그램","그램"]]), "UNIT");
 
-    this.setOutput(true, "ING");     // 바깥쪽은 기존처럼 둥근 출력 (변경 없음)
+    this.setOutput(true, "ING"); // 바깥쪽은 둥근 그대로
     this.setStyle("ingredient_blocks");
     this.setTooltip("재료를 구성합니다.");
   },
@@ -218,6 +216,7 @@ Blockly.Extensions.registerMutator("combine_mutator", {
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
+
 
 
 
