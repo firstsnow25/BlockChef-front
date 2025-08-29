@@ -212,7 +212,7 @@ Blockly.Blocks["combine_block"] = {
     this.itemCount_ = 2;
     this.setOutput(true, "ING");
     this.setStyle("action_blocks");
-    this.setMutator("combine_mutator");
+    this.setMutator(new (Blockly.icons?.Mutator || Blockly.Mutator)(["combine_mutator_item"]));
     this.updateShape_();
     this.setTooltip("재료를 합칩니다. (섞기/볶기 등에서 2개 이상 입력 용도)");
   },
@@ -318,6 +318,7 @@ Blockly.Extensions.registerMutator(
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
+
 
 
 
