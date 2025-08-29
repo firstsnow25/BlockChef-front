@@ -180,7 +180,7 @@ export function installSemantics(workspace) {
         input.connection.disconnect();
         child.bumpNeighbours?.();
       } catch {}
-      showToast("재료 이름은 먼저 ‘재료’ 계량블록에 넣은 뒤 사용하세요.", "error");
+      showToast("재료 이름은 먼저 ‘재료’ 계량블록에 넣은 뒤 사용 가능합니다.", "error");
       return;
     }
 
