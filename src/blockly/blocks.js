@@ -46,15 +46,16 @@ Blockly.Blocks["finish_block"] = {
 INGREDIENT_NAMES.forEach((name) => {
   Blockly.Blocks[`ingredient_name_${name}`] = {
     init() {
-      this.appendDummyInput().appendField(name);
-      // ING_NAME 타입 + 사각형 출력
+      this.appendDummyInput().appendField("■").appendField(name);
       this.setOutput(true, "ING_NAME");
       this.setStyle("ingredient_blocks");
+
       if (typeof this.setOutputShape === "function") {
-        try { this.setOutputShape(1 /* square */); } catch {}
+        try { this.setOutputShape(OUTPUT_SHAPE_SQUARE); } catch {}
       }
+
       this.data = JSON.stringify({ name, features: FEATURE_BY_ING[name] || ["solid"] });
-      this.setTooltip("재료 이름");
+      this.setTooltip("재료 이름 (재료 계량 블록에만 연결)");
     },
   };
 });
@@ -64,21 +65,24 @@ Blockly.Blocks["ingredient_block"] = {
   init() {
     this.appendValueInput("NAME")
       .appendField("재료")
-      .setCheck("ING_NAME"); // 재료이름만
+      .setCheck("ING_NAME");
 
-    // ✅ Zelos에서는 입력 소켓 자체도 사각형으로 바뀜
-    const conn = this.getInput("NAME")?.connection;
-    if (conn && typeof conn.setShape === "function") {
-      try { conn.setShape(1 /* square */); } catch {}
+    // 입력 커넥터도 사각형 모양으로
+    if (this.getInput && this.getInput("NAME")) {
+      const conn = this.getInput("NAME").connection;
+      if (conn?.setShape) conn.setShape(OUTPUT_SHAPE_SQUARE);
     }
-    // (※ 흰 네모 shadow 블럭은 더이상 안 씀)
 
     this.appendDummyInput()
       .appendField("양")
       .appendField(new Blockly.FieldNumber(1, 1), "QUANTITY")
-      .appendField(new Blockly.FieldDropdown([["개","개"],["컵","컵"],["리터","리터"],["그램","그램"]]), "UNIT");
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["개","개"],["컵","컵"],["리터","리터"],["그램","그램"],
+        ]),"UNIT"
+      );
 
-    this.setOutput(true, "ING"); // 완성 재료(동작에 연결)
+    this.setOutput(true, "ING");
     this.setStyle("ingredient_blocks");
     this.setTooltip("재료를 구성합니다.");
   },
