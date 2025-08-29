@@ -106,7 +106,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     const ws = Blockly.inject(hostRef.current, {
       theme: BlockChefTheme,
       toolbox: makeToolboxJson(activeCategory, search),
-      renderer: "geras",
+      renderer: "zelos",
       toolboxPosition: "start",
       collapse: false,
       comments: false,
