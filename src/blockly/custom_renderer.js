@@ -1,68 +1,115 @@
 import * as Blockly from "blockly";
 
-/** 정사각형 탭(플러그/소켓 공용) */
-function squarePaths(width, height) {
-  const w = width;
-  const h = height;
-  // 입력(소켓)과 출력(플러그)에 각각 쓰일 pathUp/pathDown
-  // 기준선에서 '사각형'을 위/아래로 반 삽입한 모양
-  const pathUp =
-    "m 0,0 v -" + (h / 2) + " h " + w + " v " + h + " h -" + w + " z";
-  const pathDown =
-    "m 0,0 v " + (h / 2) + " h " + w + " v -" + h + " h -" + w + " z";
-  return { pathUp, pathDown, width: w, height: h };
+/** 작은 유틸: 정사각형 path 생성 */
+function rectPath(x, y, w, h) {
+  return (
+    "M " + x + "," + y +
+    " h " + w +
+    " v " + h +
+    " h " + (-w) +
+    " Z"
+  );
 }
 
-/** Constants: Geras 상수 기반 + ING_NAME만 사각 이음새 */
-class BlockChefConstants extends Blockly.blockRendering.ConstantProvider {
+/** ===== Constants (Geras 기반) ===== */
+class ChefConstants extends Blockly.blockRendering.ConstantProvider {
   constructor() {
     super();
-    // 정사각형 크기(필요하면 10/10, 12/12 아무거나 써도 됨)
-    this.SQUARE_W = 10;
-    this.SQUARE_H = 10;
+    // 정사각형 크기(원하면 10~14 선에서 조절)
+    this.SQUARE_W = 12;
+    this.SQUARE_H = 12;
 
-    // 미리 만들어 둔다 (type을 꼭 SQUARE로!)
-    const sq = squarePaths(this.SQUARE_W, this.SQUARE_H);
-    this.ING_NAME_SQUARE = {
-      type: this.SHAPES.SQUARE,
-      width: sq.width,
-      height: sq.height,
-      pathUp: sq.pathUp,
-      pathDown: sq.pathDown,
-    };
-  }
-
-  /** 연결 타입별 이음새 모양 선택 */
-  shapeFor(connection) {
-    let check = connection.getCheck();
-    // check가 없는 쪽(예: 입력)을 위해 타겟의 check도 함께 본다
-    if (!check && connection.targetConnection) {
-      check = connection.targetConnection.getCheck();
-    }
-
-    // ✅ 재료이름 타입(ING_NAME)만 정사각 이음새로
-    if (check && check.includes("ING_NAME")) {
-      return this.ING_NAME_SQUARE;
-    }
-
-    // 그 외는 Geras 기본 퍼즐 탭 유지
-    return super.shapeFor(connection);
+    // 퍼즐탭/노치 등 나머지는 Geras 기본 유지
   }
 }
 
-/** Renderer 본체 */
+/** ===== 커스텀 인라인 입력(ING_NAME만 사각형으로 처리) ===== */
+class ChefInlineSquareMeasurable extends Blockly.blockRendering.InlineInput {
+  constructor(constants, input) {
+    super(constants, input);
+
+    // 정사각형 크기 확정
+    this.squareWidth = constants.SQUARE_W;
+    this.squareHeight = constants.SQUARE_H;
+
+    // 인라인 입력 총 가로폭에 ‘사각형 + 약간의 패딩’ 반영
+    // (너무 작으면 텍스트/필드가 겹침)
+    this.width = this.squareWidth + 6;   // 오른쪽 패딩 6px
+    this.height = Math.max(this.height, this.squareHeight);
+  }
+}
+
+/** ===== RenderInfo: ING_NAME 인라인 입력을 커스텀 측정치로 치환 ===== */
+class ChefRenderInfo extends Blockly.blockRendering.RenderInfo {
+  addInput_(input, activeRow) {
+    if (
+      input.type === Blockly.inputTypes.VALUE &&
+      input.connection &&
+      // 이 입력이 받는 타입이 ING_NAME이면, 사각형으로 드로잉
+      ((input.connection.getCheck() || []).includes("ING_NAME") ||
+        (input.connection.targetConnection &&
+          (input.connection.targetConnection.getCheck() || []).includes("ING_NAME")))
+    ) {
+      activeRow.elements.push(new ChefInlineSquareMeasurable(this.constants_, input));
+      // 기본 처리도 호출해서 필드 배치 등 잔여 요소를 채움
+      // (super가 같은 input을 다시 push하지 않도록 하기 위해 return)
+      return;
+    }
+
+    // 그 외는 기본(Geras) 로직
+    super.addInput_(input, activeRow);
+  }
+}
+
+/** ===== Drawer: 인라인 입력 그리기시에 사각형 구멍을 그려줌 ===== */
+class ChefDrawer extends Blockly.blockRendering.Drawer {
+  drawInternals_() {
+    // Geras 기본 내부 드로잉 먼저
+    super.drawInternals_();
+
+    // 인라인 경로(PathObject)가 없다면 생성
+    if (!this.inlinePath) {
+      this.inlinePath = this.block_.pathObject.svgPath;
+    }
+
+    // rows를 순회하며 커스텀 인라인 입력만 따로 사각형을 그림
+    for (const row of this.info_.rows) {
+      for (const elem of row.elements) {
+        if (elem instanceof ChefInlineSquareMeasurable) {
+          const w = elem.squareWidth || this.constants_.SQUARE_W;
+          const h = elem.squareHeight || this.constants_.SQUARE_H;
+
+          // x/y 계산: 인라인 입력의 왼쪽위 기준을 구함
+          const x = elem.xPos + 2; // 살짝 안쪽으로
+          const y = (elem.centerline || 0) - h / 2;
+
+          if (isFinite(x) && isFinite(y) && isFinite(w) && isFinite(h)) {
+            const path = rectPath(x, y, w, h);
+
+            // 인라인 내부 경로에 추가(겹치지 않게 누적)
+            const old = this.inlinePath.getPath();
+            this.inlinePath.setPath((old ? old + " " : "") + path);
+          }
+        }
+      }
+    }
+  }
+}
+
+/** ===== Renderer 본체: Geras를 베이스로 커스텀 클래스 주입 ===== */
 class BlockChefRenderer extends Blockly.blockRendering.Renderer {
   constructor(name) {
     super(name);
   }
-  makeConstants_() {
-    return new BlockChefConstants();
-  }
+  makeConstants_() { return new ChefConstants(); }
+  makeRenderInfo_(block) { return new ChefRenderInfo(this, block); }
+  makeDrawer_(block, info) { return new ChefDrawer(block, info); }
 }
 
 /** 등록 */
 Blockly.blockRendering.register("blockchef_renderer", BlockChefRenderer);
 export default BlockChefRenderer;
+
 
 
 
