@@ -41,48 +41,49 @@ Blockly.Blocks["finish_block"] = {
   },
 };
 
-/** ===== 재료 이름 블록 ===== */
+/** =========================================
+ * 재료 이름 블록
+ *  - ING_NAME 타입
+ *  - 커스텀 렌더러에서 사각형 이음새 적용됨
+ * ========================================= */
 INGREDIENT_NAMES.forEach((name) => {
   Blockly.Blocks[`ingredient_name_${name}`] = {
     init() {
       this.appendDummyInput().appendField(name);
       this.setOutput(true, "ING_NAME");
       this.setStyle("ingredient_blocks");
-
-      // ✅ 출력 커넥션 이음새를 사각으로
-      if (this.outputConnection?.setShape) {
-        this.outputConnection.setShape(CONNECTION_SHAPE_SQUARE);
-      }
-
-      this.data = JSON.stringify({ name, features: FEATURE_BY_ING[name] || ["solid"] });
+      this.data = JSON.stringify({
+        name,
+        features: FEATURE_BY_ING[name] || ["solid"],
+      });
       this.setTooltip("재료 이름 (계량 블록에만 연결)");
     },
   };
 });
 
-
-/** ===== 재료 계량 블록 ===== */
+/** =========================================
+ * 재료 계량 블록
+ *  - NAME 입력: ING_NAME만
+ *  - 출력: ING
+ * ========================================= */
 Blockly.Blocks["ingredient_block"] = {
   init() {
-    const nameInput = this.appendValueInput("NAME")
+    this.appendValueInput("NAME")
       .appendField("재료")
-      .setCheck("ING_NAME"); // 재료 이름만 허용
-
-    // ✅ NAME 입력 이음새를 사각으로
-    if (nameInput.connection?.setShape) {
-      nameInput.connection.setShape(CONNECTION_SHAPE_SQUARE);
-    }
-
+      .setCheck("ING_NAME");
     this.appendDummyInput()
       .appendField("양")
       .appendField(new Blockly.FieldNumber(1, 1), "QUANTITY")
-      .appendField(new Blockly.FieldDropdown([["개","개"],["컵","컵"],["리터","리터"],["그램","그램"]]), "UNIT");
-
-    this.setOutput(true, "ING"); // 바깥쪽은 둥근 그대로
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["개", "개"], ["컵", "컵"], ["리터", "리터"], ["그램", "그램"],
+        ]),"UNIT"
+      );
+    this.setOutput(true, "ING");
     this.setStyle("ingredient_blocks");
     this.setTooltip("재료를 구성합니다.");
   },
-};
+}
 
 
 /** ===== 동작 블록 ===== */
@@ -216,8 +217,6 @@ Blockly.Extensions.registerMutator("combine_mutator", {
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
-
-
 
 
 

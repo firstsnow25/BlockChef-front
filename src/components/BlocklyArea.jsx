@@ -3,6 +3,7 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } f
 import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
+import "../blockly/custom_renderer";
 
 import "../blockly/blocks";
 import { CATALOG, CATEGORY_ORDER } from "../blockly/catalog";
@@ -106,7 +107,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     const ws = Blockly.inject(hostRef.current, {
       theme: BlockChefTheme,
       toolbox: makeToolboxJson(activeCategory, search),
-      renderer: "geras",
+      renderer: "blockchef_renderer",
       toolboxPosition: "start",
       collapse: false,
       comments: false,
