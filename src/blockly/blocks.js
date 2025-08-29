@@ -3,8 +3,8 @@ import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
-// ✅ 각진 플러그 (0=round, 1=square, 2=hex)
-const OUTPUT_SHAPE_SQUARE = 1;
+const CONNECTION_SHAPE_SQUARE =
+  (Blockly.ConnectionShape && Blockly.ConnectionShape.SQUARE) || 1; // (0: round, 1: square, 2: hex)
 
 /** ===== 공통 상수 ===== */
 const INGREDIENT_NAMES = [
@@ -46,47 +46,46 @@ Blockly.Blocks["finish_block"] = {
 INGREDIENT_NAMES.forEach((name) => {
   Blockly.Blocks[`ingredient_name_${name}`] = {
     init() {
-      this.appendDummyInput().appendField("■").appendField(name);
+      this.appendDummyInput().appendField(name);
       this.setOutput(true, "ING_NAME");
       this.setStyle("ingredient_blocks");
 
-      if (typeof this.setOutputShape === "function") {
-        try { this.setOutputShape(OUTPUT_SHAPE_SQUARE); } catch {}
+      // ✅ 출력 커넥션(이음새)만 네모로
+      if (this.outputConnection && this.outputConnection.setShape) {
+        this.outputConnection.setShape(CONNECTION_SHAPE_SQUARE);
       }
 
       this.data = JSON.stringify({ name, features: FEATURE_BY_ING[name] || ["solid"] });
-      this.setTooltip("재료 이름 (재료 계량 블록에만 연결)");
+      this.setTooltip("재료 이름 (계량 블록에만 연결)");
     },
   };
 });
 
+
 /** ===== 재료 계량 블록 ===== */
 Blockly.Blocks["ingredient_block"] = {
   init() {
-    this.appendValueInput("NAME")
+    const nameInput = this
+      .appendValueInput("NAME")
       .appendField("재료")
-      .setCheck("ING_NAME");
+      .setCheck("ING_NAME"); // 오직 재료-이름만
 
-    // 입력 커넥터도 사각형 모양으로
-    if (this.getInput && this.getInput("NAME")) {
-      const conn = this.getInput("NAME").connection;
-      if (conn?.setShape) conn.setShape(OUTPUT_SHAPE_SQUARE);
+    // ✅ NAME ‘입력’ 커넥션(이음새)만 네모로
+    if (nameInput.connection && nameInput.connection.setShape) {
+      nameInput.connection.setShape(CONNECTION_SHAPE_SQUARE);
     }
 
     this.appendDummyInput()
       .appendField("양")
       .appendField(new Blockly.FieldNumber(1, 1), "QUANTITY")
-      .appendField(
-        new Blockly.FieldDropdown([
-          ["개","개"],["컵","컵"],["리터","리터"],["그램","그램"],
-        ]),"UNIT"
-      );
+      .appendField(new Blockly.FieldDropdown([["개","개"],["컵","컵"],["리터","리터"],["그램","그램"]]), "UNIT");
 
-    this.setOutput(true, "ING");
+    this.setOutput(true, "ING");     // 바깥쪽은 기존처럼 둥근 출력 (변경 없음)
     this.setStyle("ingredient_blocks");
     this.setTooltip("재료를 구성합니다.");
   },
 };
+
 
 /** ===== 동작 블록 ===== */
 Blockly.Blocks["wait_block"] = {
@@ -219,6 +218,7 @@ Blockly.Extensions.registerMutator("combine_mutator", {
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
+
 
 
 
