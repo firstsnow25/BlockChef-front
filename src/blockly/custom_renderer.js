@@ -1,52 +1,84 @@
-// src/blockly/custom_renderer.js
 import * as Blockly from "blockly";
 
-/** 커스텀 상수 공급자 */
+/**
+ * ✅ 사각형 탭 정의
+ */
+function makeSquareTab(width, height) {
+  return {
+    width,
+    height,
+    pathUp:
+      "m 0,0 v -" +
+      height / 2 +
+      " h " +
+      width +
+      " v " +
+      height +
+      " h -" +
+      width +
+      " z",
+    pathDown:
+      "m 0,0 v " +
+      height / 2 +
+      " h " +
+      width +
+      " v -" +
+      height +
+      " h -" +
+      width +
+      " z",
+  };
+}
+
+/**
+ * ✅ 커스텀 ConstantProvider
+ */
 class BlockChefConstants extends Blockly.blockRendering.ConstantProvider {
   constructor() {
     super();
-    // 사각형 탭 크기 (직접 지정해야 NaN 안 남)
+
+    // 사각형 notch 크기
     this.SQUARE_TAB_WIDTH = 12;
     this.SQUARE_TAB_HEIGHT = 8;
+
+    // 기본 퍼즐 탭도 필요할 경우 super.TAB_WIDTH / TAB_HEIGHT 사용 가능
   }
 
+  /**
+   * 연결 모양 결정
+   */
   shapeFor(connection) {
-    let check = connection.getCheck();
-    if (!check && connection.targetConnection) {
-      check = connection.targetConnection.getCheck();
-    }
+    const check = connection.getCheck();
 
-    // ING_NAME 타입 연결 → 사각형 이음새
+    // ING_NAME 타입 블럭 출력 → 재료 계량 블럭 입력 연결시 사용
     if (check && check.includes("ING_NAME")) {
-      const width = this.SQUARE_TAB_WIDTH;
-      const height = this.SQUARE_TAB_HEIGHT;
-      return {
-        type: this.SHAPES.PUZZLE,
-        width,
-        height,
-        pathUp: Blockly.utils.svgPaths.line([
-          Blockly.utils.svgPaths.point(-width, -height / 2),
-          Blockly.utils.svgPaths.point(width, -height / 2),
-        ]),
-        pathDown: Blockly.utils.svgPaths.line([
-          Blockly.utils.svgPaths.point(-width, height / 2),
-          Blockly.utils.svgPaths.point(width, height / 2),
-        ]),
-      };
+      return makeSquareTab(this.SQUARE_TAB_WIDTH, this.SQUARE_TAB_HEIGHT);
     }
 
-    // 나머지는 기존 모양 유지
+    // 그 외 → 기본 퍼즐 모양 유지
     return super.shapeFor(connection);
   }
 }
 
-/** 커스텀 렌더러 (Geras 기반) */
-class BlockChefRenderer extends Blockly.geras.Renderer {
+/**
+ * ✅ 커스텀 렌더러
+ */
+class BlockChefRenderer extends Blockly.blockRendering.Renderer {
+  constructor(name) {
+    super(name);
+  }
+
   makeConstants_() {
     return new BlockChefConstants();
   }
 }
 
-// 등록
+/**
+ * ✅ 등록
+ */
 Blockly.blockRendering.register("blockchef_renderer", BlockChefRenderer);
+
+export default BlockChefRenderer;
+
+
 
