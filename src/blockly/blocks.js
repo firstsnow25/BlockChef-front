@@ -3,8 +3,10 @@ import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 
-/** ===== 공통 상수 ===== */
-// 새 재료 리스트 (가나다 정렬)
+/** =========================
+ * 재료(ING_NAME) 목록 & 분류
+ *  - 분류: solid | liquid | oil | powder
+ * ========================= */
 const INGREDIENT_NAMES = [
   "간장",
   "김가루",
@@ -19,7 +21,6 @@ const INGREDIENT_NAMES = [
   "라면스프",
 ].sort((a, b) => a.localeCompare(b, "ko-KR"));
 
-// 새 분류: solid | liquid | oil | powder
 const FEATURE_BY_ING = {
   김치: ["solid"],
   식용유: ["oil"],
@@ -34,31 +35,26 @@ const FEATURE_BY_ING = {
   "김밥용 단무지": ["solid"],
 };
 
-// 라벨
+/** =========================
+ * 동작 라벨
+ * ========================= */
 const ACTION_LABELS = {
-  slice: "자르기",
-  fry: "볶기",
-  mix: "섞기",
-  put: "넣기",
-  boil: "끓이기",
-  grind: "갈기",
-  simmer: "삶기",
-
-  // (예전 것 유지해도 무방: 사용 안 하면 툴박스에만 안 넣으면 됨)
+  slice: "자르기",   // required: solid ; unrequired: liquid, powder, oil
+  fry: "볶기",      // required: oil & (solid|powder) ; unrequired: liquid
+  mix: "섞기",      // required: 2+ ingredients
+  put: "넣기",      // any
+  boil: "끓이기",   // required: liquid
+  grind: "갈기",    // required: solid ; unrequired: powder
+  simmer: "삶기",   // required: liquid & solid
   wait: "기다리기",
-  steam: "찌기",
-  grill: "굽기",
-  deepfry: "튀기기",
-  peel: "껍질 벗기기",
-  crack: "깨기",
-  remove_seed: "씨 제거하기",
 };
 
-// 시간 유무(필요하면 이 배열로 툴박스 노출 제어)
-const ACTIONS_WITH_TIME = ["fry", "boil", "simmer", "mix"]; // 섞기도 시간 옵션 있게 둘 수 있음
+const ACTIONS_WITH_TIME = ["fry", "boil", "simmer", "mix"];
 const ACTIONS_WITHOUT_TIME = ["slice", "put", "grind"];
 
-/** ===== 흐름 ===== */
+/** =========================
+ * 흐름: 시작/완료
+ * ========================= */
 Blockly.Blocks["start_block"] = {
   init() {
     this.appendDummyInput().appendField("요리 시작");
@@ -74,12 +70,10 @@ Blockly.Blocks["finish_block"] = {
   },
 };
 
-/** =========================================
- * 재료 이름 블록 (값)
- *  - 출력 타입: ING_NAME
- *  - data.features에 새 분류 저장
- *  - 모양(사각)은 커스텀 렌더러가 처리
- * ========================================= */
+/** =========================
+ * 재료 이름 블록 (ING_NAME)
+ *  - 커스텀 렌더러가 사각형 출력 이음새(ING_NAME) 처리
+ * ========================= */
 INGREDIENT_NAMES.forEach((name) => {
   Blockly.Blocks[`ingredient_name_${name}`] = {
     init() {
@@ -95,11 +89,11 @@ INGREDIENT_NAMES.forEach((name) => {
   };
 });
 
-/** =========================================
- * 재료 계량 블록 (값)
- *  - NAME 입력: ING_NAME만 허용
+/** =========================
+ * 재료 계량 블록 (ING)
+ *  - NAME: ING_NAME만 허용
  *  - 출력: ING
- * ========================================= */
+ * ========================= */
 Blockly.Blocks["ingredient_block"] = {
   init() {
     this.appendValueInput("NAME").appendField("재료").setCheck("ING_NAME");
@@ -121,8 +115,12 @@ Blockly.Blocks["ingredient_block"] = {
   },
 };
 
-/** ===== 동작 블록 ===== */
-// 기다리기(옵션)
+/** =========================
+ * 동작 블록
+ *  - 모든 ITEM 입력: ING만 허용
+ * ========================= */
+
+// 기다리기 (statement)
 Blockly.Blocks["wait_block"] = {
   init() {
     this.appendDummyInput()
@@ -143,9 +141,10 @@ Blockly.Blocks["wait_block"] = {
   },
 };
 
-// 시간 있는 동작들
+// 시간 있는 동작들 (statement/value 쌍)
 ACTIONS_WITH_TIME.forEach((key) => {
   const label = ACTION_LABELS[key];
+
   Blockly.Blocks[`${key}_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
@@ -165,6 +164,7 @@ ACTIONS_WITH_TIME.forEach((key) => {
       this.setStyle("action_blocks");
     },
   };
+
   Blockly.Blocks[`${key}_value_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
@@ -185,9 +185,10 @@ ACTIONS_WITH_TIME.forEach((key) => {
   };
 });
 
-// 시간 없는 동작들
+// 시간 없는 동작들 (statement/value 쌍)
 ACTIONS_WITHOUT_TIME.forEach((key) => {
   const label = ACTION_LABELS[key];
+
   Blockly.Blocks[`${key}_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
@@ -196,6 +197,7 @@ ACTIONS_WITHOUT_TIME.forEach((key) => {
       this.setStyle("action_blocks");
     },
   };
+
   Blockly.Blocks[`${key}_value_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
@@ -205,59 +207,10 @@ ACTIONS_WITHOUT_TIME.forEach((key) => {
   };
 });
 
-/** ===== 흐름 제어 ===== */
-Blockly.Blocks["repeat_n_times"] = {
-  init() {
-    this.appendDummyInput()
-      .appendField(new Blockly.FieldNumber(3, 1), "COUNT")
-      .appendField("번 반복");
-    this.appendStatementInput("DO").appendField("실행");
-    this.setPreviousStatement(true);
-    this.setNextStatement(true);
-    this.setStyle("flow_blocks");
-  },
-};
-Blockly.Blocks["repeat_until_true"] = {
-  init() {
-    this.appendDummyInput()
-      .appendField('조건 "')
-      .appendField(new Blockly.FieldTextInput("예: 면이 익을"), "CONDITION")
-      .appendField('" 될 때까지 반복');
-    this.appendStatementInput("DO").appendField("실행");
-    this.setPreviousStatement(true);
-    this.setNextStatement(true);
-    this.setStyle("flow_blocks");
-  },
-};
-Blockly.Blocks["if_condition_block"] = {
-  init() {
-    this.appendDummyInput()
-      .appendField('만약 "')
-      .appendField(new Blockly.FieldTextInput("예: 물이 끓으면"), "CONDITION")
-      .appendField('" 라면');
-    this.appendStatementInput("DO").appendField("실행");
-    this.setPreviousStatement(true);
-    this.setNextStatement(true);
-    this.setStyle("flow_blocks");
-  },
-};
-Blockly.Blocks["continue_block"] = {
-  init() {
-    this.appendDummyInput().appendField("계속하기");
-    this.setPreviousStatement(true);
-    this.setNextStatement(true);
-    this.setStyle("flow_blocks");
-  },
-};
-Blockly.Blocks["break_block"] = {
-  init() {
-    this.appendDummyInput().appendField("종료하기");
-    this.setPreviousStatement(true);
-    this.setStyle("flow_blocks");
-  },
-};
-
-/** ===== 합치기 ===== */
+/** =========================
+ * 합치기(value): 여러 재료를 하나의 ING로
+ *  - mix 같은 곳에서 2개 이상 요구 시 사용
+ * ========================= */
 Blockly.Blocks["combine_block"] = {
   init() {
     this.itemCount_ = 2;
@@ -265,7 +218,7 @@ Blockly.Blocks["combine_block"] = {
     this.setStyle("action_blocks");
     this.setMutator("combine_mutator");
     this.updateShape_();
-    this.setTooltip("재료를 합칩니다.");
+    this.setTooltip("여러 재료를 합칩니다.");
   },
   mutationToDom() {
     const m = document.createElement("mutation");
@@ -353,6 +306,7 @@ Blockly.Extensions.registerMutator(
   null,
   ["combine_mutator_item"]
 );
+
 
 /**
  * NOTE
