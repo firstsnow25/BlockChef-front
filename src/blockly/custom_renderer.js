@@ -68,11 +68,10 @@ class ChefDrawer extends Blockly.blockRendering.Drawer {
     // Geras 기본 내부 드로잉 먼저 수행
     super.drawInternals_();
 
-    // 인라인 경로(PathObject) 핸들
-    const pathObj = this.block_.pathObject?.svgPath;
-    if (!pathObj) return;
+     const po = this.block_.pathObject;
+   if (!po || !po.getPath) return;
+   let acc = po.getPath() || "";
 
-    let acc = pathObj.getPath?.() || "";
 
     for (const row of this.info_.rows) {
       for (const elem of row.elements) {
@@ -89,7 +88,7 @@ class ChefDrawer extends Blockly.blockRendering.Drawer {
       }
     }
 
-    if (acc) pathObj.setPath(acc);
+    if (acc) po.setPath(acc);
   }
 }
 
