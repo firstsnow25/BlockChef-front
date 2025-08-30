@@ -1,3 +1,4 @@
+// src/blockly/blocks.js
 import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
@@ -63,6 +64,60 @@ Blockly.Blocks["start_block"] = {
 Blockly.Blocks["finish_block"] = {
   init() {
     this.appendDummyInput().appendField("요리 완료");
+    this.setPreviousStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+
+/** =========================
+ * (복구) 흐름 블럭들
+ * ========================= */
+Blockly.Blocks["repeat_n_times"] = {
+  init() {
+    this.appendDummyInput()
+      .appendField(new Blockly.FieldNumber(3, 1), "COUNT")
+      .appendField("번 반복");
+    this.appendStatementInput("DO").appendField("실행");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+Blockly.Blocks["repeat_until_true"] = {
+  init() {
+    this.appendDummyInput()
+      .appendField('조건 "')
+      .appendField(new Blockly.FieldTextInput("예: 면이 익을"), "CONDITION")
+      .appendField('" 될 때까지 반복');
+    this.appendStatementInput("DO").appendField("실행");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+Blockly.Blocks["if_condition_block"] = {
+  init() {
+    this.appendDummyInput()
+      .appendField('만약 "')
+      .appendField(new Blockly.FieldTextInput("예: 물이 끓으면"), "CONDITION")
+      .appendField('" 라면');
+    this.appendStatementInput("DO").appendField("실행");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+Blockly.Blocks["continue_block"] = {
+  init() {
+    this.appendDummyInput().appendField("계속하기");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+Blockly.Blocks["break_block"] = {
+  init() {
+    this.appendDummyInput().appendField("종료하기");
     this.setPreviousStatement(true);
     this.setStyle("flow_blocks");
   },
@@ -206,12 +261,15 @@ ACTIONS_WITHOUT_TIME.forEach(defineActionNoTime);
 
 /** =========================
  * 합치기 (ING) — 동적 입력 + 추가 전 확인
+ *  - "추가"를 누르면 입력칸 증가
+ *  - "취소"를 누르면 연결 유지 + 입력칸 증가하지 않음
+ *  - 빈 꼬리 입력을 강제로 1칸 유지하지 않음
  * ========================= */
 Blockly.Blocks["combine_block"] = {
   init() {
     this.minItems_ = 2;
     this.itemCount_ = this.minItems_;
-    this._confirming_ = false; // confirm 중복 방지
+    this._confirming_ = false;
     this.setOutput(true, "ING");
     this.setStyle("action_blocks");
     this.setTooltip("재료를 합칩니다. (연결 시 입력 칸을 추가할지 물어봅니다)");
@@ -222,30 +280,23 @@ Blockly.Blocks["combine_block"] = {
 
       // 마지막 입력이 채워졌다면 추가 여부 확인
       if (this.isLastInputConnected_()) {
-        if (this._confirming_) return;
-        this._confirming_ = true;
-
-        this.showConfirm_("입력 칸을 하나 더 추가할까요?").then((yes) => {
-          this._confirming_ = false;
-          if (yes) {
-            this.appendNextEmptyInput_();
-          } else {
-            const last = this.getInput("ITEM" + (this.itemCount_ - 1));
-            const child = last && last.connection && last.connection.targetBlock();
-            try {
-              if (last && last.connection && child) {
-                last.connection.disconnect();
-                child.bumpNeighbours();
-              }
-            } catch {}
-          }
-        });
+        if (!this._confirming_) {
+          this._confirming_ = true;
+          this.showConfirm_("입력 칸을 하나 더 추가할까요?").then((yes) => {
+            this._confirming_ = false;
+            if (yes) {
+              this.appendNextEmptyInput_();
+            } else {
+              // 취소: 아무 것도 하지 않음 → 기존 연결 유지, 입력칸도 그대로
+            }
+          });
+        }
       }
 
-      // 꼬리쪽 빈 입력은 정확히 1개만 유지
+      // 꼬리쪽 빈 입력 제거 (0칸까지 허용). 최소개수는 아래에서 보장
       const emptyTailCount = this.getTrailingEmptyCount_();
       if (emptyTailCount > 1) {
-        this.trimTrailingEmptyInputs_(true);
+        this.trimTrailingEmptyInputs_(false);
       }
 
       // 최소 입력 보장
@@ -281,10 +332,7 @@ Blockly.Blocks["combine_block"] = {
         .setCheck("ING")
         .appendField(k === 0 ? "합치기 재료" : "재료 추가");
     }
-    // 꼬리쪽 빈 입력 1개 보장
-    if (!this.hasEmptyTail_()) {
-      this.appendNextEmptyInput_();
-    }
+    // 강제 빈 입력 1칸 유지 로직 제거 (요청사항)
   },
 
   // 상태 유틸
@@ -314,7 +362,7 @@ Blockly.Blocks["combine_block"] = {
     }
     return empties;
   },
-  trimTrailingEmptyInputs_(leaveOne = true) {
+  trimTrailingEmptyInputs_(leaveOne = false) {
     let removeCount = this.getTrailingEmptyCount_() - (leaveOne ? 1 : 0);
     while (removeCount > 0 && this.itemCount_ > this.minItems_) {
       const idx = this.itemCount_ - 1;
@@ -324,7 +372,9 @@ Blockly.Blocks["combine_block"] = {
         this.removeInput("ITEM" + idx);
         this.itemCount_--;
         removeCount--;
-      } else break;
+      } else {
+        break;
+      }
     }
   },
   ensureMinInputs_() {
@@ -394,7 +444,9 @@ Blockly.Blocks["combine_block"] = {
       host.appendChild(box);
       document.body.appendChild(host);
 
-      function cleanup() { try { document.body.removeChild(host); } catch {} }
+      function cleanup() {
+        try { document.body.removeChild(host); } catch {}
+      }
     });
   },
 };
@@ -402,8 +454,9 @@ Blockly.Blocks["combine_block"] = {
 /**
  * NOTE
  * - 재료 features는 semantics.js에서 검증/토스트에 사용.
- * - 팔레트/툴박스 노출은 catalog.js에서 조절합니다.
+ * - 팔레트 노출은 catalog.js에서 조절합니다.
  */
+
 
 
 /**
