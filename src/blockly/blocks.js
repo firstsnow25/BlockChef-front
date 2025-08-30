@@ -270,6 +270,7 @@ Blockly.Blocks["combine_block"] = {
     this.minItems_ = 2;
     this.itemCount_ = this.minItems_;
     this._confirming_ = false;
+    this._suppressKey_ = null; // "마지막 입력 연결 상태"를 기억해서 반복 팝업 방지
     this.setOutput(true, "ING");
     this.setStyle("action_blocks");
     this.setTooltip("재료를 합칩니다. (연결 시 입력 칸을 추가할지 물어봅니다)");
@@ -278,22 +279,36 @@ Blockly.Blocks["combine_block"] = {
     this.setOnChange((e) => {
       if (!this.workspace || this.isDeadOrDying_ || !e) return;
 
-      // 마지막 입력이 채워졌다면 추가 여부 확인
-      if (this.isLastInputConnected_()) {
-        if (!this._confirming_) {
+      // 현재 마지막 입력과 그 타겟
+      const last = this.getInput("ITEM" + (this.itemCount_ - 1));
+      const child = last && last.connection && last.connection.targetBlock();
+
+      // 상태키 계산(같은 타겟+같은 입력개수면 같은 상황으로 간주)
+      const stateKey = child ? `${child.id}|${this.itemCount_}` : null;
+
+      // 마지막 입력이 채워진 경우에만 확인
+      if (child) {
+        // 이미 같은 상태에서 '취소'로 스킵중이면 팝업 띄우지 않음
+        if (!this._confirming_ && this._suppressKey_ !== stateKey) {
           this._confirming_ = true;
           this.showConfirm_("입력 칸을 하나 더 추가할까요?").then((yes) => {
             this._confirming_ = false;
             if (yes) {
+              // 입력칸 추가 → 상태가 변하므로 서프레스 해제
               this.appendNextEmptyInput_();
+              this._suppressKey_ = null;
             } else {
-              // 취소: 아무 것도 하지 않음 → 기존 연결 유지, 입력칸도 그대로
+              // 취소 → 현재 상태(stateKey) 동안에는 다시 묻지 않음 (연결은 유지)
+              this._suppressKey_ = stateKey;
             }
           });
         }
+      } else {
+        // 마지막 입력이 비었으면 언제든 다음 연결에 다시 물을 수 있게 해제
+        this._suppressKey_ = null;
       }
 
-      // 꼬리쪽 빈 입력 제거 (0칸까지 허용). 최소개수는 아래에서 보장
+      // 꼬리쪽 빈 입력 정리(0칸까지 허용). 최소개수는 아래에서 보장
       const emptyTailCount = this.getTrailingEmptyCount_();
       if (emptyTailCount > 1) {
         this.trimTrailingEmptyInputs_(false);
@@ -316,23 +331,22 @@ Blockly.Blocks["combine_block"] = {
     const n = parseInt(xml.getAttribute("items"), 10);
     this.itemCount_ = Number.isFinite(n) ? n : this.minItems_;
     this.updateShape_();
+    // 구조가 바뀌었으니 상태키 초기화
+    this._suppressKey_ = null;
   },
 
   // 렌더 모양 갱신
   updateShape_() {
-    // 기존 입력 제거
     let i = 0;
     while (this.getInput("ITEM" + i)) {
       this.removeInput("ITEM" + i);
       i++;
     }
-    // 재생성
     for (let k = 0; k < this.itemCount_; k++) {
       this.appendValueInput("ITEM" + k)
         .setCheck("ING")
         .appendField(k === 0 ? "합치기 재료" : "재료 추가");
     }
-    // 강제 빈 입력 1칸 유지 로직 제거 (요청사항)
   },
 
   // 상태 유틸
@@ -340,11 +354,6 @@ Blockly.Blocks["combine_block"] = {
     if (this.itemCount_ === 0) return false;
     const last = this.getInput("ITEM" + (this.itemCount_ - 1));
     return !!(last && last.connection && last.connection.targetBlock());
-  },
-  hasEmptyTail_() {
-    if (this.itemCount_ === 0) return false;
-    const last = this.getInput("ITEM" + (this.itemCount_ - 1));
-    return !!(last && (!last.connection || !last.connection.targetBlock()));
   },
   appendNextEmptyInput_() {
     this.itemCount_ += 1;
@@ -444,9 +453,7 @@ Blockly.Blocks["combine_block"] = {
       host.appendChild(box);
       document.body.appendChild(host);
 
-      function cleanup() {
-        try { document.body.removeChild(host); } catch {}
-      }
+      function cleanup() { try { document.body.removeChild(host); } catch {} }
     });
   },
 };
@@ -488,6 +495,8 @@ Blockly.Blocks["combine_block"] = {
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
+
+
 
 
 
