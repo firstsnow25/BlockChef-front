@@ -4,7 +4,6 @@ import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 import "../blockly/custom_renderer";
-
 import "../blockly/blocks";
 import { CATALOG, CATEGORY_ORDER } from "../blockly/catalog";
 import "../blockly/blockly.css";
@@ -74,21 +73,6 @@ function makeToolboxJson(activeCategory, query) {
   return { kind: "flyoutToolbox", contents: safeToolboxContents(filtered) };
 }
 
-/* 안전 XML 파서 */
-function toDom(xmlMaybe) {
-  const xmlStr =
-    typeof xmlMaybe === "string"
-      ? xmlMaybe
-      : typeof xmlMaybe === "object"
-      ? new XMLSerializer().serializeToString(xmlMaybe)
-      : "";
-  if (!xmlStr) return null;
-  try { if (Blockly.Xml?.textToDom) return Blockly.Xml.textToDom(xmlStr); } catch {}
-  try { if (Blockly.utils?.xml?.textToDom) return Blockly.utils.xml.textToDom(xmlStr); } catch {}
-  try { return new DOMParser().parseFromString(xmlStr, "text/xml").documentElement; } catch {}
-  return null;
-}
-
 const BlocklyArea = forwardRef(function BlocklyArea(
   { initialXml = "", onXmlChange, onDirtyChange, activeCategory = CATEGORY_ORDER[0] },
   ref
@@ -113,13 +97,15 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       trashcan: true,
       grid: { spacing: 20, length: 3, colour: "#eeeeee", snap: true },
       zoom: { controls: true, wheel: true, startScale: 1, maxScale: 2, minScale: 0.4, pinch: true },
-      move: { scrollbars: { horizontal: false, vertical: true }, drag: true, wheel: true },
+      move: { scrollbars: { horizontal: false, vertical: true }, drag: true, wheel: true }, // 가로 스크롤 제거
       sounds: false,
     });
     workspaceRef.current = ws;
 
+    // ✅ semantics 설치 (연결 시 검증/토스트/차단)
     installSemantics(ws);
 
+    // 초기 XML 로드
     if (initialXml) {
       try {
         const dom = toDom(initialXml);
@@ -129,6 +115,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       }
     }
 
+    // 생성 시 lockFields 적용
     const lockOnCreate = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_CREATE) return;
       (ev.ids || []).forEach((id) => {
@@ -153,11 +140,11 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       if (typeof flyout.isDeleteArea === "function") {
         flyout.isDeleteArea = function () { return false; };
       }
-      if (typeof flyout.gap_ === "number") flyout.gap_ = 16; // 여기에 gap을 설정하여 겹치는 문제 해결
+      if (typeof flyout.gap_ === "number") flyout.gap_ = 16; // 수정된 부분 (블럭 간 간격 수정)
       try { flyout.reflow?.(); flyout.reflowInternal?.(); } catch {}
     }
 
-    // 드래그 종료 시 경계 보정
+    // 드래그 종료 시 경계 보정(팔레트 첫 칼럼까지 허용)
     const onDrag = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_DRAG) return;
       const b = ws.getBlockById(ev.blockId);
@@ -180,6 +167,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(onDrag);
 
+    // 변경 → XML 반영 + dirty 통지
     let rafId = null;
     changeListenerRef.current = () => {
       if (rafId) cancelAnimationFrame(rafId);
@@ -202,8 +190,10 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       ro.disconnect();
       workspaceRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount once
 
+  // 카테고리/검색어 전환 시 팔레트 교체
   useEffect(() => {
     const ws = workspaceRef.current;
     if (!ws) return;
@@ -213,8 +203,8 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       try { flyout?.setVisible?.(false); } catch {}
       ws.updateToolbox(tb);
       try {
-        flyout?.setVisible?.(true);
-        if (typeof flyout?.gap_ === "number") flyout.gap_ = 16;
+        flyout?.setVisible?.(true);  // 팔레트 보이도록 처리
+        if (typeof flyout?.gap_ === "number") flyout.gap_ = 16; // 수정된 부분 (블럭 간 간격 수정)
         flyout?.reflow?.();
         flyout?.reflowInternal?.();
         flyout?.scrollToStart?.();
@@ -224,6 +214,43 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     return () => cancelAnimationFrame(raf);
   }, [activeCategory, search]);
 
+  // 외부 제어 API
+  useImperativeHandle(ref, () => ({
+    getXml() {
+      const ws = workspaceRef.current;
+      if (!ws) return "";
+      const dom = Blockly.Xml.workspaceToDom(ws);
+      return Blockly.Xml.domToText(dom);
+    },
+    loadXml(xmlText) {
+      const ws = workspaceRef.current;
+      if (!ws) return;
+      ws.clear();
+      if (!xmlText) return;
+      try {
+        const dom = toDom(xmlText);
+        if (dom) Blockly.Xml.domToWorkspace(dom, ws);
+      } catch (e) {
+        console.error("XML 불러오기 실패:", e);
+      }
+    },
+    clear() { workspaceRef.current?.clear(); },
+    undo() {
+      const ws = workspaceRef.current;
+      if (ws?.undo) ws.undo(false);
+    },
+    redo() {
+      const ws = workspaceRef.current;
+      if (ws?.undo) ws.undo(true);
+    },
+    hasAnyBlocks() {
+      const ws = workspaceRef.current;
+      if (!ws) return false;
+      return ws.getTopBlocks(false).length > 0;
+    },
+  }));
+
+  // ✅ 팔레트 검색 입력 UI (아주 얇게)
   const SearchBox = () => (
     <input
       value={search}
@@ -262,6 +289,8 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
+
+
 
 
 
