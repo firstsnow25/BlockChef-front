@@ -4,12 +4,12 @@ import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 import "../blockly/custom_renderer";
+
 import "../blockly/blocks";
 import { CATALOG, CATEGORY_ORDER } from "../blockly/catalog";
 import "../blockly/blockly.css";
 import { installSemantics } from "../blockly/semantics";
 
-// BlockChef 테마 설정 (기존 유지)
 const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
   base: Blockly.Themes.Classic,
   categoryStyles: {
@@ -38,7 +38,21 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
 
 const PALETTE_MARGIN = 8;
 
-// 카테고리 필터링
+function safeToolboxContents(list) {
+  const out = [];
+  list.forEach((e) => {
+    const type = e.template;
+    if (!type || !Blockly.Blocks[type]) return;
+    out.push({
+      kind: "block",
+      type,
+      fields: e.fields || {},
+    });
+  });
+  return out;
+}
+
+// activeCategory + 검색어로 entries 필터링
 function getFilteredEntries(activeCategory, query) {
   const key = activeCategory ?? CATEGORY_ORDER[0];
   const entries = CATALOG[key] ?? [];
@@ -50,33 +64,17 @@ function getFilteredEntries(activeCategory, query) {
     const label = (e.label || e.type || e.template || "").toString();
     return (
       label.toLowerCase().includes(lower) ||
-      label.includes(q) // 한글 직접 포함
+      label.includes(q)
     );
   });
 }
-function safeToolboxContents(list) {
-  const out = [];
-  list.forEach((e) => {
-    const type = e.template;
-    if (!type || !Blockly.Blocks[type]) return;
-    out.push({
-      kind: "block",
-      type,
-      fields: e.fields || {},
-      // NOTE: label은 툴박스 UI 노출엔 쓰지 않지만, 검색 필터링에 사용
-      // data는 여기서 넣지 않고, 각 블록 정의(especially ingredient_name_*)에서 this.data 지정
-    });
-  });
-  return out;
-}
 
-// 툴박스 JSON 생성
 function makeToolboxJson(activeCategory, query) {
   const filtered = getFilteredEntries(activeCategory, query);
   return { kind: "flyoutToolbox", contents: safeToolboxContents(filtered) };
 }
 
-// Blockly XML 파서
+/* 안전 XML 파서 */
 function toDom(xmlMaybe) {
   const xmlStr =
     typeof xmlMaybe === "string"
@@ -91,7 +89,6 @@ function toDom(xmlMaybe) {
   return null;
 }
 
-// BlocklyArea 컴포넌트
 const BlocklyArea = forwardRef(function BlocklyArea(
   { initialXml = "", onXmlChange, onDirtyChange, activeCategory = CATEGORY_ORDER[0] },
   ref
@@ -100,9 +97,8 @@ const BlocklyArea = forwardRef(function BlocklyArea(
   const workspaceRef = useRef(null);
   const changeListenerRef = useRef(null);
   const dragStartPosRef = useRef(new Map());
-  const [search, setSearch] = useState(""); // 팔레트 검색어
+  const [search, setSearch] = useState(""); // ✅ 팔레트 검색어
 
-  // 초기화 및 툴박스 설정
   useEffect(() => {
     if (!hostRef.current) return;
 
@@ -117,15 +113,13 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       trashcan: true,
       grid: { spacing: 20, length: 3, colour: "#eeeeee", snap: true },
       zoom: { controls: true, wheel: true, startScale: 1, maxScale: 2, minScale: 0.4, pinch: true },
-      move: { scrollbars: { horizontal: false, vertical: true }, drag: true, wheel: true }, // 가로 스크롤 제거
+      move: { scrollbars: { horizontal: false, vertical: true }, drag: true, wheel: true },
       sounds: false,
     });
     workspaceRef.current = ws;
 
-    // ✅ semantics 설치 (연결 시 검증/토스트/차단)
     installSemantics(ws);
 
-    // 초기 XML 로드
     if (initialXml) {
       try {
         const dom = toDom(initialXml);
@@ -135,7 +129,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       }
     }
 
-    // 생성 시 lockFields 적용
     const lockOnCreate = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_CREATE) return;
       (ev.ids || []).forEach((id) => {
@@ -160,11 +153,11 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       if (typeof flyout.isDeleteArea === "function") {
         flyout.isDeleteArea = function () { return false; };
       }
-      if (typeof flyout.gap_ === "number") flyout.gap_ = 16;
+      if (typeof flyout.gap_ === "number") flyout.gap_ = 16; // 여기에 gap을 설정하여 겹치는 문제 해결
       try { flyout.reflow?.(); flyout.reflowInternal?.(); } catch {}
     }
 
-    // 드래그 종료 시 경계 보정(팔레트 첫 칼럼까지 허용)
+    // 드래그 종료 시 경계 보정
     const onDrag = (ev) => {
       if (ev.type !== Blockly.Events.BLOCK_DRAG) return;
       const b = ws.getBlockById(ev.blockId);
@@ -187,7 +180,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(onDrag);
 
-    // 변경 → XML 반영 + dirty 통지
     let rafId = null;
     changeListenerRef.current = () => {
       if (rafId) cancelAnimationFrame(rafId);
@@ -210,10 +202,8 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       ro.disconnect();
       workspaceRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount once
 
-  // 카테고리/검색어 전환 시 팔레트 교체
   useEffect(() => {
     const ws = workspaceRef.current;
     if (!ws) return;
@@ -234,43 +224,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     return () => cancelAnimationFrame(raf);
   }, [activeCategory, search]);
 
-  // 외부 제어 API
-  useImperativeHandle(ref, () => ({
-    getXml() {
-      const ws = workspaceRef.current;
-      if (!ws) return "";
-      const dom = Blockly.Xml.workspaceToDom(ws);
-      return Blockly.Xml.domToText(dom);
-    },
-    loadXml(xmlText) {
-      const ws = workspaceRef.current;
-      if (!ws) return;
-      ws.clear();
-      if (!xmlText) return;
-      try {
-        const dom = toDom(xmlText);
-        if (dom) Blockly.Xml.domToWorkspace(dom, ws);
-      } catch (e) {
-        console.error("XML 불러오기 실패:", e);
-      }
-    },
-    clear() { workspaceRef.current?.clear(); },
-    undo() {
-      const ws = workspaceRef.current;
-      if (ws?.undo) ws.undo(false);
-    },
-    redo() {
-      const ws = workspaceRef.current;
-      if (ws?.undo) ws.undo(true);
-    },
-    hasAnyBlocks() {
-      const ws = workspaceRef.current;
-      if (!ws) return false;
-      return ws.getTopBlocks(false).length > 0;
-    },
-  }));
-
-  // ✅ 팔레트 검색 입력 UI (아주 얇게)
   const SearchBox = () => (
     <input
       value={search}
@@ -309,6 +262,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
+
 
 
 
