@@ -54,6 +54,21 @@ function getFilteredEntries(activeCategory, query) {
     );
   });
 }
+function safeToolboxContents(list) {
+  const out = [];
+  list.forEach((e) => {
+    const type = e.template;
+    if (!type || !Blockly.Blocks[type]) return;
+    out.push({
+      kind: "block",
+      type,
+      fields: e.fields || {},
+      // NOTE: label은 툴박스 UI 노출엔 쓰지 않지만, 검색 필터링에 사용
+      // data는 여기서 넣지 않고, 각 블록 정의(especially ingredient_name_*)에서 this.data 지정
+    });
+  });
+  return out;
+}
 
 // 툴박스 JSON 생성
 function makeToolboxJson(activeCategory, query) {
