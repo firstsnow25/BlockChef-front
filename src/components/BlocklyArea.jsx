@@ -4,12 +4,12 @@ import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 import "../blockly/custom_renderer";
-
 import "../blockly/blocks";
 import { CATALOG, CATEGORY_ORDER } from "../blockly/catalog";
 import "../blockly/blockly.css";
 import { installSemantics } from "../blockly/semantics";
 
+// BlockChef 테마 설정 (기존 유지)
 const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
   base: Blockly.Themes.Classic,
   categoryStyles: {
@@ -38,23 +38,7 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
 
 const PALETTE_MARGIN = 8;
 
-function safeToolboxContents(list) {
-  const out = [];
-  list.forEach((e) => {
-    const type = e.template;
-    if (!type || !Blockly.Blocks[type]) return;
-    out.push({
-      kind: "block",
-      type,
-      fields: e.fields || {},
-      // NOTE: label은 툴박스 UI 노출엔 쓰지 않지만, 검색 필터링에 사용
-      // data는 여기서 넣지 않고, 각 블록 정의(especially ingredient_name_*)에서 this.data 지정
-    });
-  });
-  return out;
-}
-
-// activeCategory + 검색어로 entries 필터링
+// 카테고리 필터링
 function getFilteredEntries(activeCategory, query) {
   const key = activeCategory ?? CATEGORY_ORDER[0];
   const entries = CATALOG[key] ?? [];
@@ -71,12 +55,13 @@ function getFilteredEntries(activeCategory, query) {
   });
 }
 
+// 툴박스 JSON 생성
 function makeToolboxJson(activeCategory, query) {
   const filtered = getFilteredEntries(activeCategory, query);
   return { kind: "flyoutToolbox", contents: safeToolboxContents(filtered) };
 }
 
-/* 안전 XML 파서 */
+// Blockly XML 파서
 function toDom(xmlMaybe) {
   const xmlStr =
     typeof xmlMaybe === "string"
@@ -91,6 +76,7 @@ function toDom(xmlMaybe) {
   return null;
 }
 
+// BlocklyArea 컴포넌트
 const BlocklyArea = forwardRef(function BlocklyArea(
   { initialXml = "", onXmlChange, onDirtyChange, activeCategory = CATEGORY_ORDER[0] },
   ref
@@ -99,8 +85,9 @@ const BlocklyArea = forwardRef(function BlocklyArea(
   const workspaceRef = useRef(null);
   const changeListenerRef = useRef(null);
   const dragStartPosRef = useRef(new Map());
-  const [search, setSearch] = useState(""); // ✅ 팔레트 검색어
+  const [search, setSearch] = useState(""); // 팔레트 검색어
 
+  // 초기화 및 툴박스 설정
   useEffect(() => {
     if (!hostRef.current) return;
 
@@ -307,6 +294,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
+
 
 
 
