@@ -45,6 +45,8 @@ export const CATALOG = {
       fields: {},
     })),
     { type: "wait_stmt", label: "wait", template: "wait_block", fields: { TIME: 5, UNIT: "분" } },
+    // 동작 합치기 블록 추가
+    { type: "action_combine", label: "동작 합치기", template: "action_combine_block", fields: {} },
   ],
 
   "조리값": [
@@ -72,6 +74,7 @@ export const CATALOG = {
     { type: "finish", template: "finish_block", fields: {} },
   ],
 };
+
 
 
 
