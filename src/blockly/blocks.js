@@ -3,52 +3,30 @@ import "blockly/blocks";
 import "blockly/msg/ko";
 
 /** =========================
- * 재료 메타 (features 갱신: solid/liquid/oil/powder)
+ * 재료 메타 (features: solid/liquid/oil/powder)
  * ========================= */
 const INGREDIENT_NAMES = [
-  "김치",
-  "식용유",
-  "밥",
-  "간장",
-  "버터",
-  "라면사리",
-  "라면스프",
-  "물",
-  "소금",
-  "김가루",
-  "김밥용 단무지",
-].sort((a, b) => a.localeCompare(b, "ko-KR"));
+  "김치","식용유","밥","간장","버터",
+  "라면사리","라면스프","물","소금","김가루","김밥용 단무지",
+].sort((a,b)=>a.localeCompare(b,"ko-KR"));
 
-const FEATURE_BY_ING = {
-  김치: ["solid"],
-  식용유: ["oil"],
-  밥: ["solid"],
-  간장: ["liquid"],
-  버터: ["oil"],
-  라면사리: ["solid"],
-  라면스프: ["powder"],
-  물: ["liquid"],
-  소금: ["powder"],
-  김가루: ["powder"],
-  "김밥용 단무지": ["solid"],
+export const FEATURE_BY_ING = {
+  김치:["solid"], 식용유:["oil"], 밥:["solid"], 간장:["liquid"], 버터:["oil"],
+  라면사리:["solid"], 라면스프:["powder"], 물:["liquid"], 소금:["powder"],
+  김가루:["powder"], "김밥용 단무지":["solid"],
 };
 
 /** =========================
  * 라벨(한국어)
  * ========================= */
 const ACTION_LABELS = {
-  slice: "자르기",
-  grind: "갈기",
-  put: "넣기",
-  mix: "섞기",
-  fry: "볶기",
-  boil: "끓이기",
-  simmer: "삶기",
-  wait: "기다리기",
+  slice:"자르기", grind:"갈기", put:"넣기",
+  mix:"섞기", fry:"볶기", boil:"끓이기", simmer:"삶기",
+  wait:"기다리기",
 };
 
-const ACTIONS_WITH_TIME = ["mix", "fry", "boil", "simmer"];
-const ACTIONS_WITHOUT_TIME = ["slice", "put", "grind"];
+const ACTIONS_WITH_TIME = ["mix","fry","boil","simmer"];
+const ACTIONS_WITHOUT_TIME = ["slice","put","grind"];
 
 /** =========================
  * 시작/완료
@@ -76,8 +54,8 @@ INGREDIENT_NAMES.forEach((name) => {
   Blockly.Blocks[`ingredient_name_${name}`] = {
     init() {
       this.appendDummyInput().appendField(name);
-      this.setOutput(true, "ING_NAME");
-      this.setStyle("ingredient_blocks");
+      this.setOutput(true, "ING_NAME");       // 타입: ING_NAME
+      this.setStyle("ingredient_blocks");     // 색상/테마
       this.data = JSON.stringify({
         name,
         features: FEATURE_BY_ING[name] || ["solid"],
@@ -94,19 +72,15 @@ INGREDIENT_NAMES.forEach((name) => {
  * ========================= */
 Blockly.Blocks["ingredient_block"] = {
   init() {
-    this.appendValueInput("NAME").appendField("재료").setCheck("ING_NAME");
+    this.appendValueInput("NAME")
+      .appendField("재료")
+      .setCheck("ING_NAME");
     this.appendDummyInput()
       .appendField("양")
       .appendField(new Blockly.FieldNumber(1, 1), "QUANTITY")
-      .appendField(
-        new Blockly.FieldDropdown([
-          ["개", "개"],
-          ["컵", "컵"],
-          ["리터", "리터"],
-          ["그램", "그램"],
-        ]),
-        "UNIT"
-      );
+      .appendField(new Blockly.FieldDropdown([
+        ["개","개"],["컵","컵"],["리터","리터"],["그램","그램"],
+      ]),"UNIT");
     this.setOutput(true, "ING");
     this.setStyle("ingredient_blocks");
     this.setTooltip("재료를 구성합니다.");
@@ -115,23 +89,15 @@ Blockly.Blocks["ingredient_block"] = {
 
 /** =========================
  * 동작 (Statement & Value)
- *  - 모든 동작의 값 입력 이름을 'ITEM'으로 통일 (중요!)
- *  - 값 버전은 출력도 'ING'
+ *  - 모든 동작의 값 입력 이름을 'ITEM'으로 통일
+ *  - value 버전은 출력도 'ING'
  * ========================= */
 Blockly.Blocks["wait_block"] = {
   init() {
     this.appendDummyInput()
-      .appendField(ACTION_LABELS.wait)
-      .appendField("시간")
+      .appendField(ACTION_LABELS.wait).appendField("시간")
       .appendField(new Blockly.FieldNumber(5, 1), "TIME")
-      .appendField(
-        new Blockly.FieldDropdown([
-          ["초", "초"],
-          ["분", "분"],
-          ["시간", "시간"],
-        ]),
-        "UNIT"
-      );
+      .appendField(new Blockly.FieldDropdown([["초","초"],["분","분"],["시간","시간"]]),"UNIT");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setStyle("action_blocks");
@@ -147,14 +113,7 @@ function defineActionWithTime(key) {
       this.appendDummyInput()
         .appendField("시간")
         .appendField(new Blockly.FieldNumber(5, 1), "TIME")
-        .appendField(
-          new Blockly.FieldDropdown([
-            ["초", "초"],
-            ["분", "분"],
-            ["시간", "시간"],
-          ]),
-          "UNIT"
-        );
+        .appendField(new Blockly.FieldDropdown([["초","초"],["분","분"],["시간","시간"]]),"UNIT");
       this.setPreviousStatement(true);
       this.setNextStatement(true);
       this.setStyle("action_blocks");
@@ -167,14 +126,7 @@ function defineActionWithTime(key) {
       this.appendDummyInput()
         .appendField("시간")
         .appendField(new Blockly.FieldNumber(5, 1), "TIME")
-        .appendField(
-          new Blockly.FieldDropdown([
-            ["초", "초"],
-            ["분", "분"],
-            ["시간", "시간"],
-          ]),
-          "UNIT"
-        );
+        .appendField(new Blockly.FieldDropdown([["초","초"],["분","분"],["시간","시간"]]),"UNIT");
       this.setOutput(true, "ING");
       this.setStyle("action_blocks");
     },
@@ -205,20 +157,14 @@ function defineActionNoTime(key) {
 ACTIONS_WITHOUT_TIME.forEach(defineActionNoTime);
 
 /** =========================
- * 합치기 (ING, 가변 입력)
+ * 합치기 (ING, 가변 입력) — 안전한 방식(아이콘 클래스를 직접 new 하지 않음)
  * ========================= */
 Blockly.Blocks["combine_block"] = {
   init() {
     this.itemCount_ = 2;
     this.setOutput(true, "ING");
     this.setStyle("action_blocks");
-    const MutatorIcon = Blockly.icons && Blockly.icons.Mutator;
-    if (MutatorIcon) {
-      this.setMutator(new MutatorIcon(["combine_mutator_item"]));
-    } else {
-      // (아주 드문 케이스) 아이콘 클래스가 노출되지 않는 빌드일 때
-      console.warn("Blockly.icons.Mutator not found; mutator icon will be omitted.");
-    }
+    this.setMutator("combine_mutator"); // ✅ 문자열 키로 등록된 뮤테이터 사용
     this.updateShape_();
     this.setTooltip("재료를 합칩니다. (섞기/볶기 등에서 2개 이상 입력 용도)");
   },
@@ -263,8 +209,7 @@ Blockly.Blocks["combine_block"] = {
     let i = 0;
     while (it) {
       const input = this.getInput("ITEM" + i);
-      it.valueConnection_ =
-        input && input.connection && input.connection.targetConnection;
+      it.valueConnection_ = input && input.connection && input.connection.targetConnection;
       i++;
       it = it.nextConnection && it.nextConnection.targetBlock();
     }
@@ -309,6 +254,67 @@ Blockly.Extensions.registerMutator(
   ["combine_mutator_item"]
 );
 
+/** =========================
+ * 흐름 제어 (if/while/for/continue/break)
+ * ========================= */
+Blockly.Blocks["repeat_n_times"] = {
+  init() {
+    this.appendDummyInput()
+      .appendField(new Blockly.FieldNumber(3, 1), "COUNT")
+      .appendField("번 반복");
+    this.appendStatementInput("DO").appendField("실행");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+Blockly.Blocks["repeat_until_true"] = {
+  init() {
+    this.appendDummyInput()
+      .appendField('조건 "')
+      .appendField(new Blockly.FieldTextInput("예: 면이 익을"), "CONDITION")
+      .appendField('" 될 때까지 반복');
+    this.appendStatementInput("DO").appendField("실행");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+Blockly.Blocks["if_condition_block"] = {
+  init() {
+    this.appendDummyInput()
+      .appendField('만약 "')
+      .appendField(new Blockly.FieldTextInput("예: 물이 끓으면"), "CONDITION")
+      .appendField('" 라면');
+    this.appendStatementInput("DO").appendField("실행");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+Blockly.Blocks["continue_block"] = {
+  init() {
+    this.appendDummyInput().appendField("계속하기");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+Blockly.Blocks["break_block"] = {
+  init() {
+    this.appendDummyInput().appendField("종료하기");
+    this.setPreviousStatement(true);
+    this.setStyle("flow_blocks");
+  },
+};
+
+/**
+ * NOTE
+ * - 재료 features는 semantics.js에서 검증/토스트에 사용.
+ * - 팔레트 노출은 catalog.js에서 조절합니다.
+ */
+
+
 
 
 /**
@@ -324,6 +330,7 @@ Blockly.Extensions.registerMutator(
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
+
 
 
 
