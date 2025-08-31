@@ -231,7 +231,7 @@ function defineActionWithTime(key) {
           ]),
           "UNIT"
         );
-      this.setOutput(true, "ING");
+      this.setOutput(true, ["ING", "ACTION"]);
       this.setStyle("action_blocks");
     },
   };
@@ -253,7 +253,7 @@ function defineActionNoTime(key) {
   Blockly.Blocks[`${key}_value_block`] = {
     init() {
       this.appendValueInput("ITEM").appendField(label).setCheck("ING");
-      this.setOutput(true, "ING");
+      this.setOutput(true, ["ING", "ACTION"]);
       this.setStyle("action_blocks");
     },
   };
