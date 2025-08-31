@@ -38,6 +38,47 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
 
 const PALETTE_MARGIN = 8;
 
+/* ─────────────────────────────────────────────
+ * 플라이아웃(팔레트) 스크롤/메트릭스 보정
+ *  - reflow + scrollbar 재계산
+ *  - 휠 이벤트를 플라이아웃이 직접 처리
+ * ───────────────────────────────────────────── */
+function ensureFlyoutScroll(ws) {
+  const flyout = ws?.getFlyout?.();
+  if (!flyout) return;
+
+  try {
+    flyout.reflow?.();
+    // 카테고리/검색 전환 시 시작 위치로
+    flyout.scrollToStart?.();
+    // 내부 워크스페이스 스크롤바 사이즈 갱신
+    flyout.workspace_?.scrollbar?.resize?.();
+  } catch {}
+
+  // 루트 엘리먼트 찾아서 휠 이벤트 가로채기
+  const rootEl =
+    flyout.svgBackground_?.parentNode ||
+    flyout.svgGroup_ ||
+    flyout.workspace_?.getParentSvg?.() ||
+    null;
+  if (!rootEl) return;
+
+  // 중복 등록 방지
+  if (flyout.__wheelFix) {
+    rootEl.removeEventListener("wheel", flyout.__wheelFix);
+  }
+  const wheelFix = (e) => {
+    // 메인 워크스페이스로 전파/기본동작 막기
+    e.stopPropagation();
+    e.preventDefault();
+    // 버전별 핸들러
+    if (typeof flyout.wheel === "function") flyout.wheel(e);
+    else if (typeof flyout.onMouseWheel_ === "function") flyout.onMouseWheel_(e);
+  };
+  rootEl.addEventListener("wheel", wheelFix, { passive: false });
+  flyout.__wheelFix = wheelFix;
+}
+
 function safeToolboxContents(list) {
   const out = [];
   list.forEach((e) => {
@@ -152,7 +193,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
     };
     ws.addChangeListener(lockOnCreate);
 
-    // 팔레트 튜닝
+    // 팔레트 튜닝 + 스크롤 보정
     const flyout = ws.getFlyout?.();
     if (flyout) {
       if (typeof flyout.isDeleteArea === "function") {
@@ -160,6 +201,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       }
       if (typeof flyout.gap_ === "number") flyout.gap_ = 16;
       try { flyout.reflow?.(); flyout.reflowInternal?.(); } catch {}
+      ensureFlyoutScroll(ws);
     }
 
     // 드래그 종료 시 경계 보정(팔레트 첫 칼럼까지 허용)
@@ -225,7 +267,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
         if (typeof flyout?.gap_ === "number") flyout.gap_ = 16;
         flyout?.reflow?.();
         flyout?.reflowInternal?.();
-        flyout?.scrollToStart?.();
+        ensureFlyoutScroll(ws); // ★ 전환 후 스크롤/휠 보정 필수
       } catch {}
       Blockly.svgResize(ws);
     });
@@ -307,6 +349,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
+
 
 
 
