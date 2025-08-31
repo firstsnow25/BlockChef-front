@@ -153,8 +153,21 @@ function evaluateRule(action, blockChainRoot) {
 
 /** 설치 */
 export function installSemantics(workspace) {
+  // undo가 스스로 다시 이벤트를 발생시켜 재귀되는 걸 막는 플래그
+  let _squelch = false;
+
+  // ❗ 무효 결합은 즉시 이전 상태로 되돌리기
+  const revertInvalid = () => {
+    if (_squelch) return;
+    _squelch = true;
+    try { workspace.undo(false); } catch {}
+    // 다음 틱에 해제하여 재진입 방지
+    setTimeout(() => { _squelch = false; }, 0);
+  };
+
   const onMove = (ev) => {
     if (ev.type !== Blockly.Events.BLOCK_MOVE) return;
+    if (_squelch) return; // undo로 인해 다시 올라온 이벤트는 무시
     if (!ev.newParentId || !ev.newInputName) return;
 
     const parent = workspace.getBlockById(ev.newParentId);
@@ -169,7 +182,7 @@ export function installSemantics(workspace) {
       const child = input.connection && input.connection.targetBlock();
       if (!child) return;
       if (child.type !== "ingredient_block") {
-        try { input.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
+        revertInvalid(); // ⬅️ disconnect/bump 대신 되돌리기
         showToast("재료 합치기에는 ‘재료’ 계량블록만 연결할 수 있어요.", "error");
       }
       return; // 더 진행하지 않음
@@ -183,7 +196,7 @@ export function installSemantics(workspace) {
       const checks = child.outputConnection?.getCheck?.() || [];
       const isActionLike = Array.isArray(checks) && checks.includes("ACTION");
       if (!isActionLike) {
-        try { input.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
+        revertInvalid(); // ⬅️ 되돌리기
         showToast("동작 합치기에는 동작(값) 블록만 연결할 수 있어요.", "error");
       }
       return; // 더 진행하지 않음
@@ -200,7 +213,7 @@ export function installSemantics(workspace) {
 
     // ING_NAME 직결 금지
     if (isRawIngredientNameBlock(child)) {
-      try { input.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
+      revertInvalid(); // ⬅️ 되돌리기
       showToast("재료 이름은 먼저 ‘재료’ 계량블록에 넣은 뒤 사용 가능합니다.", "error");
       return;
     }
@@ -208,7 +221,7 @@ export function installSemantics(workspace) {
     // 동작별 의미 검증
     const verdict = evaluateRule(actionType, child);
     if (!verdict.ok) {
-      try { input.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
+      revertInvalid(); // ⬅️ 되돌리기
       showToast(verdict.error || "이 조합은 사용할 수 없어요.", "error");
     } else if (verdict.warn) {
       showToast(verdict.warn, "warn");
@@ -217,6 +230,7 @@ export function installSemantics(workspace) {
 
   workspace.addChangeListener(onMove);
 }
+
 
 
 

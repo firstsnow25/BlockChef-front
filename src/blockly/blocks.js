@@ -8,31 +8,36 @@ import { showToast } from "./semantics";  // ← 토스트 사용
  * 재료 메타 (features: solid/liquid/oil/powder)
  * ========================= */
 const INGREDIENT_NAMES = [
-  "김치",
-  "식용유",
-  "밥",
-  "간장",
-  "버터",
-  "라면사리",
-  "라면스프",
-  "물",
-  "소금",
-  "김가루",
-  "김밥용 단무지",
+  // solid
+  "김치","밥","라면사리","김밥용 단무지","당근","감자","양파","돼지고기","떡국 떡",
+  "대파","소고기","다진 마늘","소갈비","무","배","다진 생강","홀 토마토","월계수 잎",
+  "타임","베이컨","파스타면","양송이버섯","그라나파다노",
+  // liquid
+  "간장","물","국간장","액젓","올리고당","굴소스","맛술","청주","레드와인","흰우유",
+  // oil
+  "식용유","버터","참기름","올리브유",
+  // powder
+  "라면스프","소금","김가루","짜장가루","카레가루","후추","설탕",
 ].sort((a, b) => a.localeCompare(b, "ko-KR"));
 
 export const FEATURE_BY_ING = {
-  김치: ["solid"],
-  식용유: ["oil"],
-  밥: ["solid"],
-  간장: ["liquid"],
-  버터: ["oil"],
-  라면사리: ["solid"],
-  라면스프: ["powder"],
-  물: ["liquid"],
-  소금: ["powder"],
-  김가루: ["powder"],
-  "김밥용 단무지": ["solid"],
+  // solid
+  "김치":["solid"], "밥":["solid"], "라면사리":["solid"], "김밥용 단무지":["solid"], "당근":["solid"],
+  "감자":["solid"], "양파":["solid"], "돼지고기":["solid"], "떡국 떡":["solid"], "대파":["solid"],
+  "소고기":["solid"], "다진 마늘":["solid"], "소갈비":["solid"], "무":["solid"], "배":["solid"],
+  "다진 생강":["solid"], "홀 토마토":["solid"], "월계수 잎":["solid"], "타임":["solid"],
+  "베이컨":["solid"], "파스타면":["solid"], "양송이버섯":["solid"], "그라나파다노":["solid"],
+
+  // liquid
+  "간장":["liquid"], "물":["liquid"], "국간장":["liquid"], "액젓":["liquid"], "올리고당":["liquid"],
+  "굴소스":["liquid"], "맛술":["liquid"], "청주":["liquid"], "레드와인":["liquid"], "흰우유":["liquid"],
+
+  // oil
+  "식용유":["oil"], "버터":["oil"], "참기름":["oil"], "올리브유":["oil"],
+
+  // powder
+  "라면스프":["powder"], "소금":["powder"], "김가루":["powder"],
+  "짜장가루":["powder"], "카레가루":["powder"], "후추":["powder"], "설탕":["powder"],
 };
 
 /** =========================
@@ -543,7 +548,6 @@ __defineDynamicCombineBlock("action_combine_block", {
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
-
 
 
 
