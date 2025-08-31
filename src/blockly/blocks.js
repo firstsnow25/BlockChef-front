@@ -2,6 +2,7 @@
 import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
+import { showToast } from "./semantics";  // ← 토스트 사용
 
 /** =========================
  * 재료 메타 (features: solid/liquid/oil/powder)
@@ -326,6 +327,7 @@ function __defineDynamicCombineBlock(key, opts) {
       this.itemCount_ = this.minItems_;
       this._confirming_ = false;
       this._suppressKey_ = null;
+
       this.setOutput(true, opts.outputType);
       this.setStyle("action_blocks");
       this.setTooltip(opts.tooltip);
@@ -333,49 +335,80 @@ function __defineDynamicCombineBlock(key, opts) {
 
       this.setOnChange((e) => {
         if (!this.workspace || this.isDeadOrDying_ || !e) return;
-        // 🔒 팔레트(플라이아웃)에서는 동작 금지
         if (this.isInFlyout || this.workspace?.isFlyout) return;
-        // 의미있는 이벤트 + 본 블록에만 반응
-        const interested = (e.blockId === this.id) && (
-          e.type === Blockly.Events.BLOCK_MOVE ||
-          e.type === Blockly.Events.BLOCK_CHANGE ||
-          e.type === Blockly.Events.BLOCK_CREATE
-        );
-        if (!interested) return;
 
-        const last = this.getInput("ITEM" + (this.itemCount_ - 1));
-        const child = last && last.connection && last.connection.targetBlock();
-        const stateKey = child ? `${child.id}|${this.itemCount_}` : null;
+        // 우리 블록으로 "드랍"되거나(새 부모) / 우리 블록이 직접 움직인 케이스만 처리
+        const movedIntoMe =
+          e.type === Blockly.Events.BLOCK_MOVE &&
+          e.newParentId === this.id &&
+          /^ITEM\d+$/.test(e.newInputName || "");
 
-        if (child) {
+        const relateSelf =
+          e.blockId === this.id &&
+          (e.type === Blockly.Events.BLOCK_MOVE ||
+           e.type === Blockly.Events.BLOCK_CHANGE ||
+           e.type === Blockly.Events.BLOCK_CREATE);
+
+        if (!(movedIntoMe || relateSelf)) return;
+
+        // ① 허용 블럭 타입 강제(예: 재료 합치기 → ingredient_block만)
+        if (movedIntoMe && Array.isArray(opts.acceptOnlyTypes) && opts.acceptOnlyTypes.length > 0) {
+          const inp = this.getInput(e.newInputName);
+          const child = inp?.connection?.targetBlock();
+          if (child && !opts.acceptOnlyTypes.includes(child.type)) {
+            try { inp.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
+            showToast("‘재료 합치기’에는 ‘재료’ 블럭만 연결할 수 있어요.");
+            // 잘못 연결이면 이후 로직 중단
+            return;
+          }
+        }
+
+        // 현재 입력들의 채움 상태 계산
+        const filledIds = [];
+        let allFull = true;
+        for (let i = 0; i < this.itemCount_; i++) {
+          const t = this.getInput("ITEM" + i)?.connection?.targetBlock();
+          if (!t) allFull = false; else filledIds.push(t.id);
+        }
+        const stateKey = `${this.itemCount_}|${filledIds.join(",")}`;
+
+        // ② 팝업 타이밍
+        //   - 재료 합치기: "모든 입력이 꽉 찬 상태에서" 막 드랍되었을 때만 팝업
+        //   - (기본) 그 외: "마지막 입력이 채워졌을 때" 팝업 (action_combine 기존 동작 유지)
+        let shouldAsk = false;
+        if (opts.confirmOnDropAllFull) {
+          shouldAsk = movedIntoMe && allFull; // 드랍 + 전부 채움
+        } else {
+          const last = this.getInput("ITEM" + (this.itemCount_ - 1));
+          const child = last && last.connection && last.connection.targetBlock();
+          shouldAsk = !!child; // 마지막 칸이 찼다
+        }
+
+        if (shouldAsk) {
           if (!this._confirming_ && this._suppressKey_ !== stateKey) {
             this._confirming_ = true;
             __showConfirm("입력 칸을 하나 더 추가할까요?").then((yes) => {
               this._confirming_ = false;
               if (yes) {
                 this.appendNextEmptyInput_();
-                this._suppressKey_ = null;
+                this._suppressKey_ = null; // 상태가 바뀌었으니 해제
               } else {
-                // 취소 → 연결 유지 + 같은 상태에선 다시 묻지 않음
-                this._suppressKey_ = stateKey;
+                this._suppressKey_ = stateKey; // 같은 상태에선 다시 묻지 않음
               }
             });
           }
         } else {
-          this._suppressKey_ = null;
+          // 하나라도 비면 다음에 다시 묻게 상태 해제
+          if (!allFull) this._suppressKey_ = null;
         }
 
-        // 꼬리 빈 입력 정리
+        // 꼬리 정리 & 최소 입력 보장
         const emptyTailCount = this.getTrailingEmptyCount_();
-        if (emptyTailCount > 1) {
-          this.trimTrailingEmptyInputs_(!!opts.leaveOneEmptyTail);
-        }
-        // 최소 입력 보장
-        if (this.itemCount_ < this.minItems_) {
-          this.ensureMinInputs_();
-        }
+        if (emptyTailCount > 1) this.trimTrailingEmptyInputs_(!!opts.leaveOneEmptyTail);
+        if (this.itemCount_ < this.minItems_) this.ensureMinInputs_();
       });
     },
+
     mutationToDom() {
       const m = document.createElement("mutation");
       m.setAttribute("items", String(this.itemCount_));
@@ -387,6 +420,7 @@ function __defineDynamicCombineBlock(key, opts) {
       this.updateShape_();
       this._suppressKey_ = null;
     },
+
     updateShape_() {
       let i = 0;
       while (this.getInput("ITEM" + i)) { this.removeInput("ITEM" + i); i++; }
@@ -396,6 +430,7 @@ function __defineDynamicCombineBlock(key, opts) {
           .appendField(k === 0 ? opts.firstLabel : opts.nextLabel);
       }
     },
+
     getTrailingEmptyCount_() {
       let empties = 0;
       for (let i = this.itemCount_ - 1; i >= 0; i--) {
@@ -405,6 +440,7 @@ function __defineDynamicCombineBlock(key, opts) {
       }
       return empties;
     },
+
     trimTrailingEmptyInputs_(leaveOne = false) {
       let removeCount = this.getTrailingEmptyCount_() - (leaveOne ? 1 : 0);
       while (removeCount > 0 && this.itemCount_ > this.minItems_) {
@@ -418,36 +454,43 @@ function __defineDynamicCombineBlock(key, opts) {
         } else break;
       }
     },
+
     appendNextEmptyInput_() {
       this.itemCount_ += 1;
       this.appendValueInput("ITEM" + (this.itemCount_ - 1))
         .setCheck(opts.inputCheck)
         .appendField(opts.nextLabel);
     },
+
     ensureMinInputs_() {
       while (this.itemCount_ < this.minItems_) this.appendNextEmptyInput_();
     },
   };
 }
 
-// ✅ 재료 합치기
+
+// 재료 합치기: 재료(ingredient_block)만 허용 + 전부 찼을 때 드랍 직후 팝업
 __defineDynamicCombineBlock("combine_block", {
   outputType: "ING",
   inputCheck: "ING",
   firstLabel: "합치기 재료",
   nextLabel: "재료 추가",
-  tooltip: "재료를 합칩니다. (연결 시 입력 칸을 추가할지 물어봅니다)",
-  leaveOneEmptyTail: false, // 기존 동작 유지
+  tooltip: "재료를 합칩니다. (재료 블럭만 연결 가능)",
+  leaveOneEmptyTail: false,
+  acceptOnlyTypes: ["ingredient_block"],
+  confirmOnDropAllFull: true,
 });
 
-// ✅ 동작 합치기
+// 동작 합치기: 기존 동작 유지(마지막 칸 찼을 때 묻기, 타입 제한 없음)
 __defineDynamicCombineBlock("action_combine_block", {
   outputType: "ACTION",
   inputCheck: "ACTION",
   firstLabel: "동작 추가",
   nextLabel: "동작 추가",
-  tooltip: "여러 동작을 합칩니다. (연결 시 입력 칸을 추가할지 물어봅니다)",
-  leaveOneEmptyTail: true, // 기존 구현대로 꼬리 한 칸 유지
+  tooltip: "여러 동작을 합칩니다.",
+  leaveOneEmptyTail: true,
+  // acceptOnlyTypes: 없음
+  // confirmOnDropAllFull: 없음(기존 로직)
 });
 
 
