@@ -7,8 +7,10 @@
 .blocklyFlyoutBackground { fill: #efefef !important; }
 .blocklyFlyout { box-shadow: inset -1px 0 0 #dedede; }
 
-/* 팔레트 아이템 겹침 방지 */
-.blocklyFlyout .blocklyBlockCanvas { transform: translate(0, 0) !important; }
+/* ⛔ (삭제) 팔레트 아이템 겹침 방지 강제 transform
+   Blockly가 스크롤 시 .blocklyBlockCanvas에 translate를 주므로
+   아래 라인이 있으면 스크롤이 동작하지 않습니다. */
+/* .blocklyFlyout .blocklyBlockCanvas { transform: translate(0, 0) !important; } */
 
 /* 드래그 마커/선택 강조 */
 .blocklySelected > path.blocklyPath {
@@ -26,6 +28,19 @@
 /* ✅ 수평 스크롤바 숨김 */
 .blocklyScrollbarHorizontal,
 .blocklyScrollbarKnobHorizontal { display: none !important; }
+
+/* ✅ 플라이아웃은 브라우저 기본 스크롤을 끄고(충돌 방지),
+      Blockly 내부 스크롤만 사용하게 한다 */
+.blocklyToolboxDiv,
+.blocklyFlyout,
+.blocklyFlyoutBackground {
+  overflow: hidden !important;
+}
+
+/* (크롬/사파리 등) 네이티브 스크롤바 강제 숨김 */
+.blocklyFlyout::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+.blocklyFlyout { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+
 
 
 
