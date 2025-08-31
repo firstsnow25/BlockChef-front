@@ -474,8 +474,8 @@ function __defineDynamicCombineBlock(key, opts) {
       this.setStyle("flow_blocks");
       this.setTooltip("상하(문장) 동작들을 좌우 'ACTION' 값으로 감싸 동작 합치기에 연결합니다.");
 
-      this.appendDummyInput().appendField("동작 묶기 → 값");
-      this.appendStatementInput("STEPS").appendField("동작들"); // 여기에 mix/fry/boil/wait 등의 '문장' 블럭을 넣음
+      this.appendDummyInput().appendField("상하->좌우전환 블럭");
+      this.appendStatementInput("STEPS").appendField("블럭들"); // 여기에 mix/fry/boil/wait 등의 '문장' 블럭을 넣음
     },
   };
 }
@@ -543,6 +543,7 @@ __defineDynamicCombineBlock("action_combine_block", {
  * - 툴박스(flyout)에서 내려오는 fields/data 프리셋/lockFields 처리는
  *   BlocklyArea.jsx의 BLOCK_CREATE 리스너에서 적용됩니다.
  */
+
 
 
 
