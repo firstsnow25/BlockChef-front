@@ -155,7 +155,6 @@ function evaluateRule(action, blockChainRoot) {
 export function installSemantics(workspace) {
   const onMove = (ev) => {
     if (ev.type !== Blockly.Events.BLOCK_MOVE) return;
-    // 연결 성립한 move만
     if (!ev.newParentId || !ev.newInputName) return;
 
     const parent = workspace.getBlockById(ev.newParentId);
@@ -165,40 +164,53 @@ export function installSemantics(workspace) {
     const input = parent.getInput(inputName);
     if (!input) return;
 
-    // 우리가 검사할 건 모든 조리 블록의 값 입력 'ITEM' 하나
+    // ── A) 재료 합치기: ingredient_block만 허용 ─────────────────────────
+    if (parent.type === "combine_block" && /^ITEM\d+$/.test(inputName)) {
+      const child = input.connection && input.connection.targetBlock();
+      if (!child) return;
+      if (child.type !== "ingredient_block") {
+        try { input.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
+        showToast("재료 합치기에는 ‘재료’ 계량블록만 연결할 수 있어요.", "error");
+      }
+      return; // 더 진행하지 않음
+    }
+
+    // ── B) 동작 합치기: ACTION 타입(동작값 블럭)만 허용 ───────────────────
+    if (parent.type === "action_combine_block" && /^ITEM\d+$/.test(inputName)) {
+      const child = input.connection && input.connection.targetBlock();
+      if (!child) return;
+
+      const checks = child.outputConnection?.getCheck?.() || [];
+      const isActionLike = Array.isArray(checks) && checks.includes("ACTION");
+      if (!isActionLike) {
+        try { input.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
+        showToast("동작 합치기에는 동작(값) 블록만 연결할 수 있어요.", "error");
+      }
+      return; // 더 진행하지 않음
+    }
+
+    // ── C) 기존 조리 동작 룰(ITEM 입력에만 적용) ────────────────────────
     if (inputName !== "ITEM") return;
 
     const actionType = getActionTypeFromBlockType(parent.type);
-    if (!actionType) return; // 재료/흐름 등은 무시
+    if (!actionType) return; // 재료/흐름/합치기 등은 무시
 
     const child = input.connection && input.connection.targetBlock();
     if (!child) return;
 
-    // 1) 재료이름(ING_NAME)을 바로 꽂으려는 시도 → 금지 + 토스트
+    // ING_NAME 직결 금지
     if (isRawIngredientNameBlock(child)) {
-      try {
-        input.connection.disconnect();
-        child.bumpNeighbours?.();
-      } catch {}
+      try { input.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
       showToast("재료 이름은 먼저 ‘재료’ 계량블록에 넣은 뒤 사용 가능합니다.", "error");
       return;
     }
 
-    // 2) 정상 ING 체인 규칙 검사
+    // 동작별 의미 검증
     const verdict = evaluateRule(actionType, child);
-    if (verdict.ok && !verdict.warn) return;
-
     if (!verdict.ok) {
-      // 불가: 튕김
-      try {
-        input.connection.disconnect();
-        child.bumpNeighbours?.();
-      } catch {}
+      try { input.connection.disconnect(); child.bumpNeighbours?.(); } catch {}
       showToast(verdict.error || "이 조합은 사용할 수 없어요.", "error");
-      return;
-    }
-
-    if (verdict.warn) {
+    } else if (verdict.warn) {
       showToast(verdict.warn, "warn");
     }
   };

@@ -473,7 +473,7 @@ function __defineDynamicCombineBlock(key, opts) {
 __defineDynamicCombineBlock("combine_block", {
   outputType: "ING",
   inputCheck: "ING",
-  firstLabel: "합치기 재료",
+  firstLabel: "재료 합치기",
   nextLabel: "재료 추가",
   tooltip: "재료를 합칩니다. (재료 블럭만 연결 가능)",
   leaveOneEmptyTail: false,
@@ -484,10 +484,10 @@ __defineDynamicCombineBlock("combine_block", {
 // 동작 합치기: 기존 동작 유지(마지막 칸 찼을 때 묻기, 타입 제한 없음)
 __defineDynamicCombineBlock("action_combine_block", {
   outputType: "ACTION",
-  inputCheck: "ACTION",
-  firstLabel: "동작 추가",
+  inputCheck: null,
+  firstLabel: "동작 합치기",
   nextLabel: "동작 추가",
-  tooltip: "여러 동작을 합칩니다.",
+  tooltip: "여러 동작을 합칩니다.(연결 시 입력 칸을 추가할지 물어봅니다)",
   leaveOneEmptyTail: true,
   // acceptOnlyTypes: 없음
   // confirmOnDropAllFull: 없음(기존 로직)
