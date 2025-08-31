@@ -466,6 +466,18 @@ function __defineDynamicCombineBlock(key, opts) {
       while (this.itemCount_ < this.minItems_) this.appendNextEmptyInput_();
     },
   };
+  // 동작 스택 → ACTION 값 어댑터
+  Blockly.Blocks["action_adapter_block"] = {
+    init() {
+      // 값 블럭(좌우) + 안쪽에 문장 스택을 담는 C-형태
+      this.setOutput(true, "ACTION");
+      this.setStyle("flow_blocks");
+      this.setTooltip("상하(문장) 동작들을 좌우 'ACTION' 값으로 감싸 동작 합치기에 연결합니다.");
+
+      this.appendDummyInput().appendField("동작 묶기 → 값");
+      this.appendStatementInput("STEPS").appendField("동작들"); // 여기에 mix/fry/boil/wait 등의 '문장' 블럭을 넣음
+    },
+  };
 }
 
 

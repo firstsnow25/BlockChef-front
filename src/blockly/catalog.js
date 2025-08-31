@@ -72,6 +72,7 @@ export const CATALOG = {
     { type: "continue", template: "continue_block", fields: {} },
     { type: "break", template: "break_block", fields: {} },
     { type: "finish", template: "finish_block", fields: {} },
+    { type: "action_adapter", label: "동작→값 어댑터", template: "action_adapter_block", fields: {} },
   ],
 };
 
