@@ -21,13 +21,13 @@ const ACTIONS_WITHOUT_TIME = ["slice", "put", "grind"];
 export const CATALOG = {
   "재료": [
     { type: "ingredient", label: "재료", template: "ingredient_block", fields: { QUANTITY: 1, UNIT: "개" } },
+    { type: "combine_val", label: "합치기", template: "combine_block", fields: {} },
     ...ING_NAMES.map((n) => ({
       type: `ing_name_${n}`,
       label: n,
       template: `ingredient_name_${n}`,
       fields: {},
     })),
-    { type: "combine_val", label: "합치기", template: "combine_block", fields: {} },
   ],
 
   "조리": [
@@ -47,6 +47,8 @@ export const CATALOG = {
   ],
 
   "조리값": [
+    // 동작 합치기 블록 추가
+    { type: "action_combine", label: "동작 합치기", template: "action_combine_block", fields: {} },
     ...ACTIONS_WITH_TIME.map((k) => ({
       type: `${k}_val`,
       label: k,
@@ -59,8 +61,6 @@ export const CATALOG = {
       template: `${k}_value_block`,
       fields: {},
     })),
-    // 동작 합치기 블록 추가
-    { type: "action_combine", label: "동작 합치기", template: "action_combine_block", fields: {} },
   ],
 
   "흐름": [
@@ -74,6 +74,7 @@ export const CATALOG = {
     { type: "action_adapter", label: "동작→값 어댑터", template: "action_adapter_block", fields: {} },
   ],
 };
+
 
 
 
