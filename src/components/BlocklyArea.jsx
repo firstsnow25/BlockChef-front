@@ -4,6 +4,7 @@ import * as Blockly from "blockly";
 import "blockly/blocks";
 import "blockly/msg/ko";
 import "../blockly/custom_renderer";
+
 import "../blockly/blocks";
 import { CATALOG, CATEGORY_ORDER } from "../blockly/catalog";
 import "../blockly/blockly.css";
@@ -46,6 +47,8 @@ function safeToolboxContents(list) {
       kind: "block",
       type,
       fields: e.fields || {},
+      // NOTE: label은 툴박스 UI 노출엔 쓰지 않지만, 검색 필터링에 사용
+      // data는 여기서 넣지 않고, 각 블록 정의(especially ingredient_name_*)에서 this.data 지정
     });
   });
   return out;
@@ -63,7 +66,7 @@ function getFilteredEntries(activeCategory, query) {
     const label = (e.label || e.type || e.template || "").toString();
     return (
       label.toLowerCase().includes(lower) ||
-      label.includes(q)
+      label.includes(q) // 한글 직접 포함
     );
   });
 }
@@ -71,6 +74,21 @@ function getFilteredEntries(activeCategory, query) {
 function makeToolboxJson(activeCategory, query) {
   const filtered = getFilteredEntries(activeCategory, query);
   return { kind: "flyoutToolbox", contents: safeToolboxContents(filtered) };
+}
+
+/* 안전 XML 파서 */
+function toDom(xmlMaybe) {
+  const xmlStr =
+    typeof xmlMaybe === "string"
+      ? xmlMaybe
+      : typeof xmlMaybe === "object"
+      ? new XMLSerializer().serializeToString(xmlMaybe)
+      : "";
+  if (!xmlStr) return null;
+  try { if (Blockly.Xml?.textToDom) return Blockly.Xml.textToDom(xmlStr); } catch {}
+  try { if (Blockly.utils?.xml?.textToDom) return Blockly.utils.xml.textToDom(xmlStr); } catch {}
+  try { return new DOMParser().parseFromString(xmlStr, "text/xml").documentElement; } catch {}
+  return null;
 }
 
 const BlocklyArea = forwardRef(function BlocklyArea(
@@ -140,7 +158,7 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       if (typeof flyout.isDeleteArea === "function") {
         flyout.isDeleteArea = function () { return false; };
       }
-      if (typeof flyout.gap_ === "number") flyout.gap_ = 16; // 수정된 부분 (블럭 간 간격 수정)
+      if (typeof flyout.gap_ === "number") flyout.gap_ = 16;
       try { flyout.reflow?.(); flyout.reflowInternal?.(); } catch {}
     }
 
@@ -203,8 +221,8 @@ const BlocklyArea = forwardRef(function BlocklyArea(
       try { flyout?.setVisible?.(false); } catch {}
       ws.updateToolbox(tb);
       try {
-        flyout?.setVisible?.(true);  // 팔레트 보이도록 처리
-        if (typeof flyout?.gap_ === "number") flyout.gap_ = 16; // 수정된 부분 (블럭 간 간격 수정)
+        flyout?.setVisible?.(true);
+        if (typeof flyout?.gap_ === "number") flyout.gap_ = 16;
         flyout?.reflow?.();
         flyout?.reflowInternal?.();
         flyout?.scrollToStart?.();
@@ -289,7 +307,6 @@ const BlocklyArea = forwardRef(function BlocklyArea(
 });
 
 export default BlocklyArea;
-
 
 
 

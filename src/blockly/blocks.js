@@ -259,408 +259,197 @@ function defineActionNoTime(key) {
 }
 ACTIONS_WITHOUT_TIME.forEach(defineActionNoTime);
 
-/** =========================
- * 합치기 (ING) — 동적 입력 + 추가 전 확인
- *  - "추가"를 누르면 입력칸 증가
- *  - "취소"를 누르면 연결 유지 + 입력칸 증가하지 않음
- *  - 빈 꼬리 입력을 강제로 1칸 유지하지 않음
- * ========================= */
-Blockly.Blocks["combine_block"] = {
-  init() {
-    this.minItems_ = 2;
-    this.itemCount_ = this.minItems_;
-    this._confirming_ = false;
-    this._suppressKey_ = null; // "마지막 입력 연결 상태"를 기억해서 반복 팝업 방지
-    this.setOutput(true, "ING");
-    this.setStyle("action_blocks");
-    this.setTooltip("재료를 합칩니다. (연결 시 입력 칸을 추가할지 물어봅니다)");
-    this.updateShape_();
+/* ───────────────────────────────
+ * 공통 헬퍼: 초경량 확인 모달 (Promise<boolean>)
+ * ─────────────────────────────── */
+function __showConfirm(message) {
+  return new Promise((resolve) => {
+    const host = document.createElement("div");
+    host.style.position = "fixed";
+    host.style.left = "0"; host.style.top = "0";
+    host.style.right = "0"; host.style.bottom = "0";
+    host.style.display = "flex";
+    host.style.alignItems = "center";
+    host.style.justifyContent = "center";
+    host.style.background = "rgba(0,0,0,0.25)";
+    host.style.zIndex = "999999";
 
-    this.setOnChange((e) => {
-      if (!this.workspace || this.isDeadOrDying_ || !e) return;
+    const box = document.createElement("div");
+    box.style.background = "#333"; box.style.color = "#fff";
+    box.style.padding = "14px 16px";
+    box.style.borderRadius = "10px";
+    box.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25)";
+    box.style.minWidth = "260px"; box.style.fontSize = "13px";
 
-      // 현재 마지막 입력과 그 타겟
-      const last = this.getInput("ITEM" + (this.itemCount_ - 1));
-      const child = last && last.connection && last.connection.targetBlock();
+    const msg = document.createElement("div");
+    msg.textContent = message; msg.style.marginBottom = "10px";
 
-      // 상태키 계산(같은 타겟+같은 입력개수면 같은 상황으로 간주)
-      const stateKey = child ? `${child.id}|${this.itemCount_}` : null;
+    const row = document.createElement("div");
+    row.style.display = "flex"; row.style.gap = "8px"; row.style.justifyContent = "flex-end";
 
-      // 마지막 입력이 채워진 경우에만 확인
-      if (child) {
-        // 이미 같은 상태에서 '취소'로 스킵중이면 팝업 띄우지 않음
-        if (!this._confirming_ && this._suppressKey_ !== stateKey) {
-          this._confirming_ = true;
-          this.showConfirm_("입력 칸을 하나 더 추가할까요?").then((yes) => {
-            this._confirming_ = false;
-            if (yes) {
-              // 입력칸 추가 → 상태가 변하므로 서프레스 해제
-              this.appendNextEmptyInput_();
-              this._suppressKey_ = null;
-            } else {
-              // 취소 → 현재 상태(stateKey) 동안에는 다시 묻지 않음 (연결은 유지)
-              this._suppressKey_ = stateKey;
-            }
-          });
+    const yes = document.createElement("button");
+    yes.textContent = "추가";
+    yes.style.padding = "6px 10px"; yes.style.borderRadius = "8px";
+    yes.style.border = "0"; yes.style.cursor = "pointer";
+    yes.style.background = "#ffb703"; yes.style.color = "#222";
+
+    const no = document.createElement("button");
+    no.textContent = "취소";
+    no.style.padding = "6px 10px"; no.style.borderRadius = "8px";
+    no.style.border = "0"; no.style.cursor = "pointer";
+    no.style.background = "#666"; no.style.color = "#fff";
+
+    yes.onclick = () => { cleanup(); resolve(true); };
+    no.onclick  = () => { cleanup(); resolve(false); };
+
+    row.appendChild(no); row.appendChild(yes);
+    box.appendChild(msg); box.appendChild(row);
+    host.appendChild(box); document.body.appendChild(host);
+    function cleanup(){ try { document.body.removeChild(host); } catch {} }
+  });
+}
+
+/* ───────────────────────────────
+ * 공통 팩토리: 동적 합치기 블록 생성기
+ *  - key: 블록 타입명
+ *  - opts:
+ *    outputType: setOutput 체크 타입("ING"/"ACTION")
+ *    inputCheck: 입력 체크 타입("ING"/"ACTION")
+ *    firstLabel / nextLabel: 입력 필드 라벨
+ *    tooltip: 툴팁
+ *    leaveOneEmptyTail: 꼬리쪽 빈 입력을 1칸 유지할지 여부
+ * ─────────────────────────────── */
+function __defineDynamicCombineBlock(key, opts) {
+  Blockly.Blocks[key] = {
+    init() {
+      this.minItems_ = 2;
+      this.itemCount_ = this.minItems_;
+      this._confirming_ = false;
+      this._suppressKey_ = null;
+      this.setOutput(true, opts.outputType);
+      this.setStyle("action_blocks");
+      this.setTooltip(opts.tooltip);
+      this.updateShape_();
+
+      this.setOnChange((e) => {
+        if (!this.workspace || this.isDeadOrDying_ || !e) return;
+        // 🔒 팔레트(플라이아웃)에서는 동작 금지
+        if (this.isInFlyout || this.workspace?.isFlyout) return;
+        // 의미있는 이벤트 + 본 블록에만 반응
+        const interested = (e.blockId === this.id) && (
+          e.type === Blockly.Events.BLOCK_MOVE ||
+          e.type === Blockly.Events.BLOCK_CHANGE ||
+          e.type === Blockly.Events.BLOCK_CREATE
+        );
+        if (!interested) return;
+
+        const last = this.getInput("ITEM" + (this.itemCount_ - 1));
+        const child = last && last.connection && last.connection.targetBlock();
+        const stateKey = child ? `${child.id}|${this.itemCount_}` : null;
+
+        if (child) {
+          if (!this._confirming_ && this._suppressKey_ !== stateKey) {
+            this._confirming_ = true;
+            __showConfirm("입력 칸을 하나 더 추가할까요?").then((yes) => {
+              this._confirming_ = false;
+              if (yes) {
+                this.appendNextEmptyInput_();
+                this._suppressKey_ = null;
+              } else {
+                // 취소 → 연결 유지 + 같은 상태에선 다시 묻지 않음
+                this._suppressKey_ = stateKey;
+              }
+            });
+          }
+        } else {
+          this._suppressKey_ = null;
         }
-      } else {
-        // 마지막 입력이 비었으면 언제든 다음 연결에 다시 물을 수 있게 해제
-        this._suppressKey_ = null;
-      }
 
-      // 꼬리쪽 빈 입력 정리(0칸까지 허용). 최소개수는 아래에서 보장
-      const emptyTailCount = this.getTrailingEmptyCount_();
-      if (emptyTailCount > 1) {
-        this.trimTrailingEmptyInputs_(false);
-      }
-
-      // 최소 입력 보장
-      if (this.itemCount_ < this.minItems_) {
-        this.ensureMinInputs_();
-      }
-    });
-  },
-
-  // 직렬화/역직렬화
-  mutationToDom() {
-    const m = document.createElement("mutation");
-    m.setAttribute("items", String(this.itemCount_));
-    return m;
-  },
-  domToMutation(xml) {
-    const n = parseInt(xml.getAttribute("items"), 10);
-    this.itemCount_ = Number.isFinite(n) ? n : this.minItems_;
-    this.updateShape_();
-    // 구조가 바뀌었으니 상태키 초기화
-    this._suppressKey_ = null;
-  },
-
-  // 렌더 모양 갱신
-  updateShape_() {
-    let i = 0;
-    while (this.getInput("ITEM" + i)) {
-      this.removeInput("ITEM" + i);
-      i++;
-    }
-    for (let k = 0; k < this.itemCount_; k++) {
-      this.appendValueInput("ITEM" + k)
-        .setCheck("ING")
-        .appendField(k === 0 ? "합치기 재료" : "재료 추가");
-    }
-  },
-
-  // 상태 유틸
-  isLastInputConnected_() {
-    if (this.itemCount_ === 0) return false;
-    const last = this.getInput("ITEM" + (this.itemCount_ - 1));
-    return !!(last && last.connection && last.connection.targetBlock());
-  },
-  appendNextEmptyInput_() {
-    this.itemCount_ += 1;
-    this.appendValueInput("ITEM" + (this.itemCount_ - 1))
-      .setCheck("ING")
-      .appendField("재료 추가");
-  },
-  getTrailingEmptyCount_() {
-    let empties = 0;
-    for (let i = this.itemCount_ - 1; i >= 0; i--) {
-      const input = this.getInput("ITEM" + i);
-      const isEmpty = !input || !input.connection || !input.connection.targetBlock();
-      if (isEmpty) empties++;
-      else break;
-    }
-    return empties;
-  },
-  trimTrailingEmptyInputs_(leaveOne = false) {
-    let removeCount = this.getTrailingEmptyCount_() - (leaveOne ? 1 : 0);
-    while (removeCount > 0 && this.itemCount_ > this.minItems_) {
-      const idx = this.itemCount_ - 1;
-      const input = this.getInput("ITEM" + idx);
-      const isEmpty = !input || !input.connection || !input.connection.targetBlock();
-      if (isEmpty) {
-        this.removeInput("ITEM" + idx);
-        this.itemCount_--;
-        removeCount--;
-      } else {
-        break;
-      }
-    }
-  },
-  ensureMinInputs_() {
-    while (this.itemCount_ < this.minItems_) {
-      this.appendNextEmptyInput_();
-    }
-  },
-
-  // 초경량 확인 UI (Promise<boolean>)
-  showConfirm_(message) {
-    return new Promise((resolve) => {
-      const host = document.createElement("div");
-      host.style.position = "fixed";
-      host.style.left = "0";
-      host.style.top = "0";
-      host.style.right = "0";
-      host.style.bottom = "0";
-      host.style.display = "flex";
-      host.style.alignItems = "center";
-      host.style.justifyContent = "center";
-      host.style.background = "rgba(0,0,0,0.25)";
-      host.style.zIndex = "999999";
-
-      const box = document.createElement("div");
-      box.style.background = "#333";
-      box.style.color = "#fff";
-      box.style.padding = "14px 16px";
-      box.style.borderRadius = "10px";
-      box.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25)";
-      box.style.minWidth = "260px";
-      box.style.fontSize = "13px";
-
-      const msg = document.createElement("div");
-      msg.textContent = message;
-      msg.style.marginBottom = "10px";
-
-      const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.gap = "8px";
-      row.style.justifyContent = "flex-end";
-
-      const yes = document.createElement("button");
-      yes.textContent = "추가";
-      yes.style.padding = "6px 10px";
-      yes.style.borderRadius = "8px";
-      yes.style.border = "0";
-      yes.style.cursor = "pointer";
-      yes.style.background = "#ffb703";
-      yes.style.color = "#222";
-
-      const no = document.createElement("button");
-      no.textContent = "취소";
-      no.style.padding = "6px 10px";
-      no.style.borderRadius = "8px";
-      no.style.border = "0";
-      no.style.cursor = "pointer";
-      no.style.background = "#666";
-      no.style.color = "#fff";
-
-      yes.onclick = () => { cleanup(); resolve(true); };
-      no.onclick  = () => { cleanup(); resolve(false); };
-
-      row.appendChild(no);
-      row.appendChild(yes);
-      box.appendChild(msg);
-      box.appendChild(row);
-      host.appendChild(box);
-      document.body.appendChild(host);
-
-      function cleanup() { try { document.body.removeChild(host); } catch {} }
-    });
-  },
-};
-/** =========================
- * 동작 합치기 (동작: mix, fry, boil 등) — 동적 입력 + 추가 전 확인
- * ========================= */
-Blockly.Blocks["action_combine_block"] = {
-  init() {
-    this.minItems_ = 2;  // 최소 2개 이상의 동작이 연결되어야 함
-    this.itemCount_ = this.minItems_;
-    this._confirming_ = false; // confirm 중복 방지
-    this._suppressKey_ = null; // 상태 기억용 키 (동작 합치기 시)
-    this.setOutput(true, "ACTION");
-    this.setStyle("action_blocks");
-    this.setTooltip("여러 동작을 합칩니다. (연결 시 입력 칸을 추가할지 물어봅니다)");
-    this.updateShape_();
-
-    // 동적 슬롯 증감 (뮤테이터 대신)
-    this.setOnChange((e) => {
-      if (!this.workspace || this.isDeadOrDying_ || !e) return;
-
-      const last = this.getInput("ITEM" + (this.itemCount_ - 1));
-      const child = last && last.connection && last.connection.targetBlock();
-
-      // 상태키 계산(같은 타겟+같은 입력개수면 같은 상황으로 간주)
-      const stateKey = child ? `${child.id}|${this.itemCount_}` : null;
-
-      // 마지막 입력이 채워졌다면 추가 여부 확인
-      if (child) {
-        // 이미 같은 상태에서 '취소'로 스킵중이면 팝업 띄우지 않음
-        if (!this._confirming_ && this._suppressKey_ !== stateKey) {
-          this._confirming_ = true;
-          this.showConfirm_("입력 칸을 하나 더 추가할까요?").then((yes) => {
-            this._confirming_ = false;
-            if (yes) {
-              this.appendNextEmptyInput_();
-              this._suppressKey_ = null;
-            } else {
-              const last = this.getInput("ITEM" + (this.itemCount_ - 1));
-              const child = last && last.connection && last.targetBlock();
-              try {
-                if (last && last.connection && child) {
-                  last.connection.disconnect();
-                  child.bumpNeighbours();
-                }
-              } catch {}
-            }
-          });
+        // 꼬리 빈 입력 정리
+        const emptyTailCount = this.getTrailingEmptyCount_();
+        if (emptyTailCount > 1) {
+          this.trimTrailingEmptyInputs_(!!opts.leaveOneEmptyTail);
         }
-      } else {
-        // 마지막 입력이 비었으면 언제든 다음 연결에 다시 물을 수 있게 해제
-        this._suppressKey_ = null;
+        // 최소 입력 보장
+        if (this.itemCount_ < this.minItems_) {
+          this.ensureMinInputs_();
+        }
+      });
+    },
+    mutationToDom() {
+      const m = document.createElement("mutation");
+      m.setAttribute("items", String(this.itemCount_));
+      return m;
+    },
+    domToMutation(xml) {
+      const n = parseInt(xml.getAttribute("items"), 10);
+      this.itemCount_ = Number.isFinite(n) ? n : this.minItems_;
+      this.updateShape_();
+      this._suppressKey_ = null;
+    },
+    updateShape_() {
+      let i = 0;
+      while (this.getInput("ITEM" + i)) { this.removeInput("ITEM" + i); i++; }
+      for (let k = 0; k < this.itemCount_; k++) {
+        this.appendValueInput("ITEM" + k)
+          .setCheck(opts.inputCheck)
+          .appendField(k === 0 ? opts.firstLabel : opts.nextLabel);
       }
-
-      // 꼬리쪽 빈 입력은 정확히 1개만 유지
-      const emptyTailCount = this.getTrailingEmptyCount_();
-      if (emptyTailCount > 1) {
-        this.trimTrailingEmptyInputs_(true);
+    },
+    getTrailingEmptyCount_() {
+      let empties = 0;
+      for (let i = this.itemCount_ - 1; i >= 0; i--) {
+        const input = this.getInput("ITEM" + i);
+        const isEmpty = !input || !input.connection || !input.connection.targetBlock();
+        if (isEmpty) empties++; else break;
       }
-
-      // 최소 입력 보장
-      if (this.itemCount_ < this.minItems_) {
-        this.ensureMinInputs_();
+      return empties;
+    },
+    trimTrailingEmptyInputs_(leaveOne = false) {
+      let removeCount = this.getTrailingEmptyCount_() - (leaveOne ? 1 : 0);
+      while (removeCount > 0 && this.itemCount_ > this.minItems_) {
+        const idx = this.itemCount_ - 1;
+        const input = this.getInput("ITEM" + idx);
+        const isEmpty = !input || !input.connection || !input.connection.targetBlock();
+        if (isEmpty) {
+          this.removeInput("ITEM" + idx);
+          this.itemCount_--;
+          removeCount--;
+        } else break;
       }
-    });
-  },
+    },
+    appendNextEmptyInput_() {
+      this.itemCount_ += 1;
+      this.appendValueInput("ITEM" + (this.itemCount_ - 1))
+        .setCheck(opts.inputCheck)
+        .appendField(opts.nextLabel);
+    },
+    ensureMinInputs_() {
+      while (this.itemCount_ < this.minItems_) this.appendNextEmptyInput_();
+    },
+  };
+}
 
-  // 직렬화/역직렬화
-  mutationToDom() {
-    const m = document.createElement("mutation");
-    m.setAttribute("items", String(this.itemCount_));
-    return m;
-  },
-  domToMutation(xml) {
-    const n = parseInt(xml.getAttribute("items"), 10);
-    this.itemCount_ = Number.isFinite(n) ? n : this.minItems_;
-    this.updateShape_();
-    this._suppressKey_ = null;
-  },
+// ✅ 재료 합치기
+__defineDynamicCombineBlock("combine_block", {
+  outputType: "ING",
+  inputCheck: "ING",
+  firstLabel: "합치기 재료",
+  nextLabel: "재료 추가",
+  tooltip: "재료를 합칩니다. (연결 시 입력 칸을 추가할지 물어봅니다)",
+  leaveOneEmptyTail: false, // 기존 동작 유지
+});
 
-  // 렌더 모양 갱신
-  updateShape_() {
-    let i = 0;
-    while (this.getInput("ITEM" + i)) {
-      this.removeInput("ITEM" + i);
-      i++;
-    }
-    for (let k = 0; k < this.itemCount_; k++) {
-      this.appendValueInput("ITEM" + k)
-        .setCheck("ACTION")
-        .appendField(k === 0 ? "동작 추가" : "동작 추가");
-    }
+// ✅ 동작 합치기
+__defineDynamicCombineBlock("action_combine_block", {
+  outputType: "ACTION",
+  inputCheck: "ACTION",
+  firstLabel: "동작 추가",
+  nextLabel: "동작 추가",
+  tooltip: "여러 동작을 합칩니다. (연결 시 입력 칸을 추가할지 물어봅니다)",
+  leaveOneEmptyTail: true, // 기존 구현대로 꼬리 한 칸 유지
+});
 
-    // 꼬리쪽 빈 입력 1개 보장
-    if (!this.hasEmptyTail_()) {
-      this.appendNextEmptyInput_();
-    }
-  },
-
-  // 상태 유틸
-  isLastInputConnected_() {
-    if (this.itemCount_ === 0) return false;
-    const last = this.getInput("ITEM" + (this.itemCount_ - 1));
-    return !!(last && last.connection && last.connection.targetBlock());
-  },
-  appendNextEmptyInput_() {
-    this.itemCount_ += 1;
-    this.appendValueInput("ITEM" + (this.itemCount_ - 1))
-      .setCheck("ACTION")
-      .appendField("동작 추가");
-  },
-  getTrailingEmptyCount_() {
-    let empties = 0;
-    for (let i = this.itemCount_ - 1; i >= 0; i--) {
-      const input = this.getInput("ITEM" + i);
-      const isEmpty = !input || !input.connection || !input.connection.targetBlock();
-      if (isEmpty) empties++;
-      else break;
-    }
-    return empties;
-  },
-  trimTrailingEmptyInputs_(leaveOne = false) {
-    let removeCount = this.getTrailingEmptyCount_() - (leaveOne ? 1 : 0);
-    while (removeCount > 0 && this.itemCount_ > this.minItems_) {
-      const idx = this.itemCount_ - 1;
-      const input = this.getInput("ITEM" + idx);
-      const isEmpty = !input || !input.connection || !input.connection.targetBlock();
-      if (isEmpty) {
-        this.removeInput("ITEM" + idx);
-        this.itemCount_--;
-        removeCount--;
-      } else {
-        break;
-      }
-    }
-  },
-  ensureMinInputs_() {
-    while (this.itemCount_ < this.minItems_) {
-      this.appendNextEmptyInput_();
-    }
-  },
-
-  // 초경량 확인 UI (Promise<boolean>)
-  showConfirm_(message) {
-    return new Promise((resolve) => {
-      const host = document.createElement("div");
-      host.style.position = "fixed";
-      host.style.left = "0";
-      host.style.top = "0";
-      host.style.right = "0";
-      host.style.bottom = "0";
-      host.style.display = "flex";
-      host.style.alignItems = "center";
-      host.style.justifyContent = "center";
-      host.style.background = "rgba(0,0,0,0.25)";
-      host.style.zIndex = "999999";
-
-      const box = document.createElement("div");
-      box.style.background = "#333";
-      box.style.color = "#fff";
-      box.style.padding = "14px 16px";
-      box.style.borderRadius = "10px";
-      box.style.boxShadow = "0 10px 20px rgba(0,0,0,0.25)";
-      box.style.minWidth = "260px";
-      box.style.fontSize = "13px";
-
-      const msg = document.createElement("div");
-      msg.textContent = message;
-      msg.style.marginBottom = "10px";
-
-      const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.gap = "8px";
-      row.style.justifyContent = "flex-end";
-
-      const yes = document.createElement("button");
-      yes.textContent = "추가";
-      yes.style.padding = "6px 10px";
-      yes.style.borderRadius = "8px";
-      yes.style.border = "0";
-      yes.style.cursor = "pointer";
-      yes.style.background = "#ffb703";
-      yes.style.color = "#222";
-
-      const no = document.createElement("button");
-      no.textContent = "취소";
-      no.style.padding = "6px 10px";
-      no.style.borderRadius = "8px";
-      no.style.border = "0";
-      no.style.cursor = "pointer";
-      no.style.background = "#666";
-      no.style.color = "#fff";
-
-      yes.onclick = () => { cleanup(); resolve(true); };
-      no.onclick  = () => { cleanup(); resolve(false); };
-
-      row.appendChild(no);
-      row.appendChild(yes);
-      box.appendChild(msg);
-      box.appendChild(row);
-      host.appendChild(box);
-      document.body.appendChild(host);
-
-      function cleanup() { try { document.body.removeChild(host); } catch {} }
-    });
-  },
-};
 
 /**
  * NOTE
