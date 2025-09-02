@@ -43,6 +43,15 @@ export default function TopNavbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  
+  useEffect(() => {
+  const closeMenus = () => {
+    setShowProfileMenu(false);
+    setShowLogoutConfirm(false);
+  };
+  window.addEventListener("blockchef:ui-blur", closeMenus);
+  return () => window.removeEventListener("blockchef:ui-blur", closeMenus);
+}, []);
 
   // ✅ 이동 전 확인: /main에서 작업중(블록 존재)일 때만 경고
   const confirmLeaveIfDirty = () => {

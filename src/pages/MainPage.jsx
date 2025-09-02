@@ -106,7 +106,11 @@ export default function MainPage() {
     <div className="flex flex-col min-h-screen bg-white">
       <TopNavbar />
 
-      <div className="flex flex-row flex-1">
+      {/* ✅ 메인 컨텐츠 아무 곳이나 클릭하면 드롭다운 닫힘 */}
+      <div
+        className="flex flex-row flex-1"
+        onMouseDown={() => window.dispatchEvent(new CustomEvent("blockchef:ui-blur"))}
+      >
         {/* 좌측 카테고리 버튼 */}
         <div className="w-[120px] border-r border-gray-200 p-2">
           {CATEGORY_ORDER.map((tab) => (
