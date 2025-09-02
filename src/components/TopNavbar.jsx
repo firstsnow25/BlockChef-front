@@ -56,11 +56,32 @@ export default function TopNavbar() {
     return true;
   };
 
+  // ✅ 상단 메뉴 핸들러
   const handleTopNav = (target) => {
     setActiveMenu(target);
-    if (!confirmLeaveIfDirty()) return;
-    if (target === "main") navigate("/main");
-    else if (target === "my") navigate("/my-recipe");
+
+    // 레시피 만들기: 메인에서 작업 중이면 경고 → 확인 시 작업영역 완전 초기화
+    if (target === "main") {
+      if (!confirmLeaveIfDirty()) return;
+
+      // ▶ MainPage가 듣는 커스텀 이벤트. 메인에 있을 때 즉시 블록/폼 초기화.
+      window.dispatchEvent(new CustomEvent("blockchef:new-recipe"));
+      // 안전하게 dirty 리셋 (MainPage도 다시 0으로 세팅함)
+      sessionStorage.setItem("blockchef:dirty", "0");
+
+      setShowProfileMenu(false);
+      setShowLogoutConfirm(false);
+      navigate("/main");
+      return;
+    }
+
+    // 나의 레시피는 기존 로직 유지
+    if (target === "my") {
+      if (!confirmLeaveIfDirty()) return;
+      setShowProfileMenu(false);
+      setShowLogoutConfirm(false);
+      navigate("/my-recipe");
+    }
   };
 
   const executeLogout = () => {
@@ -71,11 +92,12 @@ export default function TopNavbar() {
   };
 
   return (
-    <div className="flex justify-between items-center px-8 py-4 border-b border-gray-200 relative bg-white">
+    <div className="flex justify-between items-center px-8 py-4 border-b border-gray-200 relative bg-white z-30">
       <div className="flex items-center">
         <img src={blockChefImage} alt="BlockChef" className="w-8 h-8 mr-2" />
         <span className="text-xl font-semibold text-orange-500">BlockChef</span>
       </div>
+
       <div className="flex gap-6 text-sm items-center">
         <button
           onClick={() => handleTopNav("main")}
@@ -91,6 +113,7 @@ export default function TopNavbar() {
           나의 레시피
         </button>
         <span>|</span>
+
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => {
@@ -102,8 +125,9 @@ export default function TopNavbar() {
             내정보 ▾
           </button>
 
+          {/* 프로필 드롭다운 */}
           {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-md z-10 py-4">
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-md z-[60] py-4">
               <div className="absolute top-[-8px] right-6 w-4 h-4 bg-white border-l border-t border-gray-300 rotate-45"></div>
               <p className="text-center font-semibold mb-4">{userId}</p>
               <div className="flex justify-around">
@@ -129,7 +153,7 @@ export default function TopNavbar() {
 
           {/* 로그아웃 확인 팝업 */}
           {showLogoutConfirm && (
-            <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-300 shadow-lg rounded-md z-20 py-4 px-4">
+            <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-300 shadow-lg rounded-md z-[70] py-4 px-4">
               <p className="text-center text-sm mb-3 font-medium">로그아웃하시겠습니까?</p>
               <div className="flex justify-between">
                 <button
@@ -152,5 +176,6 @@ export default function TopNavbar() {
     </div>
   );
 }
+
 
 

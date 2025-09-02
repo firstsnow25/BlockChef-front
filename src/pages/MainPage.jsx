@@ -25,11 +25,13 @@ export default function MainPage() {
   const location = useLocation();
   const blocklyRef = useRef(null);
 
+  // ✅ 레시피 상세 로드
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
     if (id) loadRecipeDetail(id);
     if (!id) sessionStorage.setItem("blockchef:dirty", "0");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
   const loadRecipeDetail = async (id) => {
@@ -41,7 +43,7 @@ export default function MainPage() {
       setTags((data.tags || []).map((t) => `#${t}`));
       const xml = data.xml || "";
       setRecipeXml(xml);
-      sessionStorage.setItem("blockchef:dirty", "0"); // 로드 직후는 깨끗한 상태
+      sessionStorage.setItem("blockchef:dirty", "0");
       blocklyRef.current?.loadXml(xml);
     } catch (err) {
       console.error("레시피 불러오기 실패:", err);
@@ -50,6 +52,7 @@ export default function MainPage() {
     }
   };
 
+  // ✅ 저장
   const handleSave = async () => {
     setTitleError(!recipeTitle.trim());
     setTagsError(tags.length === 0);
@@ -74,11 +77,30 @@ export default function MainPage() {
     }
   };
 
+  // ✅ XML 변경 → dirty 플래그
   const handleXmlChange = (xml) => {
     setRecipeXml(xml);
     const hasBlock = typeof xml === "string" && xml.includes("<block");
     sessionStorage.setItem("blockchef:dirty", hasBlock ? "1" : "0");
   };
+
+  // ✅ [추가] TopNavbar가 쏘는 "새 레시피 시작" 이벤트를 받으면 작업영역/폼을 완전 초기화
+  useEffect(() => {
+    const onNewRecipe = () => {
+      // 작업영역 싹 지우기
+      try { blocklyRef.current?.clear(); } catch {}
+      // 폼/상태 초기화
+      setRecipeId(null);
+      setRecipeTitle("");
+      setRecipeDescription("");
+      setTags([]);
+      setRecipeXml("");
+      setActiveTab(CATEGORY_ORDER[0]);
+      sessionStorage.setItem("blockchef:dirty", "0");
+    };
+    window.addEventListener("blockchef:new-recipe", onNewRecipe);
+    return () => window.removeEventListener("blockchef:new-recipe", onNewRecipe);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -100,7 +122,7 @@ export default function MainPage() {
         {/* Blockly 영역 */}
         <div className="flex-1 bg-gray-100 relative">
           <div className="absolute inset-4 border-2 border-gray-300 bg-white rounded-xl overflow-hidden">
-            {/* ▶ 우측 상단 툴바 (가로 정렬 / 기존 아이콘/색 유지) */}
+            {/* 우측 상단 툴바 (z-10 그대로 유지) */}
             <div className="absolute top-3 right-3 z-10 flex items-center gap-4">
               <ChevronLeft
                 className="text-orange-400 cursor-pointer"
@@ -174,6 +196,7 @@ export default function MainPage() {
     </div>
   );
 }
+
 
 
 
