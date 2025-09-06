@@ -118,7 +118,9 @@ export default function MainPage() {
               key={tab}
               text={tab}
               onClick={() => setActiveTab(tab)}
-              className={`w-full my-1 ${activeTab === tab ? "bg-orange-400" : ""}text-[13px] leading-[1.1] whitespace-nowrap`}
+              className={`w-full my-1 whitespace-nowrap text-[12px] leading-tight tracking-tight px-3 py-2 ${
+                activeTab === tab ? "bg-orange-400" : ""
+              }`}
             />
           ))}
         </div>
