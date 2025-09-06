@@ -30,7 +30,7 @@ export const CATALOG = {
     })),
   ],
 
-  "조리": [
+  "메인 요리동작": [
     ...ACTIONS_WITH_TIME.map((k) => ({
       type: `${k}_stmt`,
       label: k,
@@ -46,7 +46,7 @@ export const CATALOG = {
     { type: "wait_stmt", label: "wait", template: "wait_block", fields: { TIME: 5, UNIT: "분" } },
   ],
 
-  "조리값": [
+  "재료 준비동작": [
     // 동작 합치기 블록 추가
     { type: "action_combine", label: "동작 합치기", template: "action_combine_block", fields: {} },
     ...ACTIONS_WITH_TIME.map((k) => ({
@@ -63,7 +63,7 @@ export const CATALOG = {
     })),
   ],
 
-  "흐름": [
+  "동작제어": [
     { type: "start", template: "start_block", fields: {} },
     { type: "repeat_n", template: "repeat_n_times", fields: { COUNT: 3 } },
     { type: "repeat_until", template: "repeat_until_true", fields: { CONDITION: "예: 면이 익을" } },
