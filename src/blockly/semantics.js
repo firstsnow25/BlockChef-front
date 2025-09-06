@@ -158,7 +158,6 @@ function evaluateRule(action, blockChainRoot) {
 
 /** 설치 */
 export function installSemantics(workspace) {
-  // undo가 재귀로 다시 이벤트를 발생시키는 것 방지
   let _squelch = false;
   const revertInvalid = () => {
     if (_squelch) return;
@@ -179,9 +178,10 @@ export function installSemantics(workspace) {
     const input = parent.getInput(inputName);
     if (!input) return;
 
-    // ─────────────────────────────────────────────
-    // A) 재료 합치기: ingredient_block만 허용
-    // ─────────────────────────────────────────────
+    // ✅ ING_NAME → 계량블럭(NAME) 연결은 무조건 허용 (간섭 금지)
+    if (parent.type === "ingredient_block" && inputName === "NAME") return;
+
+    // ── A) 재료 합치기: ingredient_block만 허용 ─────────────────────────
     if (parent.type === "combine_block" && /^ITEM\d+$/.test(inputName)) {
       const child = input.connection && input.connection.targetBlock();
       if (!child) return;
@@ -192,65 +192,50 @@ export function installSemantics(workspace) {
       return;
     }
 
-    // ─────────────────────────────────────────────
-    // B) 동작 합치기(= 준비된 재료): 동작 값/결과만 허용
-    //   - 허용: 출력 체크에 ING 또는 ACTION 포함(동작 값/결과)
-    //   - 금지: ingredient_block, ING_NAME(재료이름) 등
-    // ─────────────────────────────────────────────
+    // ── B) 동작 합치기(준비된 재료): 동작 값/결과만 허용 ────────────────
     if (parent.type === "action_combine_block" && /^ITEM\d+$/.test(inputName)) {
       const child = input.connection && input.connection.targetBlock();
       if (!child) return;
       const checks = child.outputConnection?.getCheck?.() || [];
-      const isName = isRawIngredientNameBlock(child);
-      const isIngredientMeasured = child.type === "ingredient_block";
+      const isName = isRawIngredientNameBlock(child);      // 재료 이름 블럭
+      const isMeasured = child.type === "ingredient_block"; // 계량블럭
       const isActionLike = checks.includes("ING") || checks.includes("ACTION");
-
-      if (isName || isIngredientMeasured || !isActionLike) {
+      if (isName || isMeasured || !isActionLike) {
         revertInvalid();
         showToast("동작 합치기에는 동작(값) 블록이나 결과 값만 연결할 수 있어요. 재료는 먼저 ‘재료’ 계량블록에 넣어 값을 만든 뒤 사용하세요.", "error");
       }
       return;
     }
 
-    // ─────────────────────────────────────────────
-    // C) 모든 '동작' 블록(조리 + 조리값)에 동일 규칙 적용
-    //    - parent가 *_block 또는 *_value_block 인 경우
-    //    - 입력 이름이 ITEM 이거나, 해당 입력이 ING 타입을 받는 경우
-    // ─────────────────────────────────────────────
+    // ── C) 조리 & 조리값 공통 규칙: ‘ITEM’ 슬롯에만 적용 ────────────────
+    if (inputName !== "ITEM") return;
+
     const actionType = getActionTypeFromBlockType(parent.type);
     if (!actionType) return; // 재료/흐름/합치기 등은 무시
-
-    const acceptsING =
-      (input.connection?.check_ == null) || // null이면 미리보기 허용 → 의미검사는 우리가 한다
-      (Array.isArray(input.connection?.check_) && input.connection.check_.includes("ING"));
-
-    const isItemLike = inputName === "ITEM" || acceptsING;
-    if (!isItemLike) return;
 
     const child = input.connection && input.connection.targetBlock();
     if (!child) return;
 
-    // ING_NAME(재료이름) 직접 연결 금지
+    // 재료이름(ING_NAME)을 바로 꽂는 시도는 금지 (두 카테고리 공통)
     if (isRawIngredientNameBlock(child)) {
       revertInvalid();
       showToast("재료 이름은 먼저 ‘재료’ 계량블록에 넣은 뒤 사용 가능합니다.", "error");
       return;
     }
 
-    // 동작별 의미 검증 (조리/조리값 동일 적용)
+    // 동작 의미 규칙 (섞기 2개 이상 등) — 조리/조리값 동일하게 적용
     const verdict = evaluateRule(actionType, child);
     if (!verdict.ok) {
       revertInvalid();
       showToast(verdict.error || "이 조합은 사용할 수 없어요.", "error");
       return;
     }
-    if (verdict.warn) {
-      showToast(verdict.warn, "warn");
-    }
+    if (verdict.warn) showToast(verdict.warn, "warn");
   };
 
   workspace.addChangeListener(onMove);
 }
+
 
 
 
