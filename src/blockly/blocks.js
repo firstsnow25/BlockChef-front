@@ -152,27 +152,55 @@ INGREDIENT_NAMES.forEach((name) => {
  * 재료 계량 블록 (ING)
  *  - NAME: ING_NAME만
  *  - 출력: ING
+ *  - 양(QUANTITY): 정수만(precision=1)
+ *  - 단위(UNIT): 확장된 드롭다운
  * ========================= */
 Blockly.Blocks["ingredient_block"] = {
   init() {
-    this.appendValueInput("NAME").appendField("재료").setCheck("ING_NAME");
+    this.appendValueInput("NAME")
+      .appendField("재료")
+      .setCheck("ING_NAME");
+
+    // ⬇️ 정수만 허용: precision=1 (소수점 키 입력 자체가 차단됨)
+    const qtyField = new Blockly.FieldNumber(
+      1,      // default
+      1,      // min (필요하면 0으로 바꿔도 됨)
+      null,   // max 없음
+      1       // precision=1 → 정수만
+    );
+
+    // (선택) 안전용 보정: 혹시라도 이상 값이 들어오면 정수로 고정
+    qtyField.setValidator((v) => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return 1;
+      const i = Math.floor(n);
+      return i >= 1 ? i : 1;
+    });
+
     this.appendDummyInput()
       .appendField("양")
-      .appendField(new Blockly.FieldNumber(1, 1), "QUANTITY")
+      .appendField(qtyField, "QUANTITY")
       .appendField(
         new Blockly.FieldDropdown([
           ["개", "개"],
           ["컵", "컵"],
           ["리터", "리터"],
           ["그램", "그램"],
+          // ⬇️ 추가 단위
+          ["ml", "ml"],
+          ["kg", "kg"],
+          ["큰술", "큰술"],
+          ["작은술", "작은술"],
         ]),
         "UNIT"
       );
+
     this.setOutput(true, "ING");
     this.setStyle("ingredient_blocks");
     this.setTooltip("재료를 구성합니다.");
   },
 };
+
 
 /** =========================
  * 동작 (Statement & Value)
