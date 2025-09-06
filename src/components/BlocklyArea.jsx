@@ -22,6 +22,7 @@ const BlockChefTheme = Blockly.Theme.defineTheme("blockchef", {
     ingredient_blocks: { colourPrimary: "#b08968", colourSecondary: "#caa27e", colourTertiary: "#8c6f56" },
     action_main_blocks:    { colourPrimary: "#d9776f", colourSecondary: "#eba39d", colourTertiary: "#ba625b" }, // 조리(문장)
     action_value_blocks:   { colourPrimary: "#2bb5ae", colourSecondary: "#7bdad5", colourTertiary: "#1e8d87" }, // 조리값(값)
+    action_blocks:       { colourPrimary: "#d9776f", colourSecondary: "#eba39d", colourTertiary: "#ba625b" },
     flow_blocks: { colourPrimary: "#6aa6e8", colourSecondary: "#8fbaf0", colourTertiary: "#4f89c5" },
   },
   componentStyles: {
