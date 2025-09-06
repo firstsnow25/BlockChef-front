@@ -500,7 +500,7 @@ __defineDynamicCombineBlock("combine_block", {
 
 // 동작 합치기: 기존 동작 유지(마지막 칸 찼을 때 묻기, 타입 제한 없음)
 __defineDynamicCombineBlock("action_combine_block", {
-  outputType: "ACTION",
+  outputType: ["ING", "ACTION"],
   inputCheck: null,
   firstLabel: "동작 합치기",
   nextLabel: "동작 추가",
