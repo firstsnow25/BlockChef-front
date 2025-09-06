@@ -59,15 +59,28 @@ function isRawIngredientNameBlock(block) {
 function countINGChildren(block) {
   if (!block) return 0;
   if (block.type === "ingredient_block") return 1;
+
+  // 재료 합치기
   if (block.type === "combine_block") {
     let n = 0, i = 0;
     while (block.getInput("ITEM" + i)) {
-      const child = block.getInputTargetBlock("ITEM" + i);
-      n += countINGChildren(child);
+      n += countINGChildren(block.getInputTargetBlock("ITEM" + i));
       i++;
     }
     return n;
   }
+
+  // ⭐ 동작 합치기(값 묶음)도 재료 개수 집계에 포함
+  if (block.type === "action_combine_block") {
+    let n = 0, i = 0;
+    while (block.getInput("ITEM" + i)) {
+      n += countINGChildren(block.getInputTargetBlock("ITEM" + i));
+      i++;
+    }
+    return n;
+  }
+
+  // 일반 동작 값 블록 체인(ING을 ITEM 슬롯에 받음)
   const child = block.getInputTargetBlock?.("ITEM");
   if (child) return countINGChildren(child);
   return 0;
@@ -75,29 +88,36 @@ function countINGChildren(block) {
 
 /** 동작 키 추출: foo_block / foo_value_block → foo */
 function getActionTypeFromBlockType(type) {
-  const suffixes = ["_block", "_value_block"];
-  for (const s of suffixes) if (type.endsWith(s)) return type.slice(0, -s.length);
-  return null;
+  if (!type) return null;
+  let t = String(type);
+  // 1) 가장 긴 접미사부터 제거
+  if (t.endsWith("_value_block")) t = t.slice(0, -"_value_block".length); // mix_value
+  else if (t.endsWith("_block")) t = t.slice(0, -"_block".length);        // mix
+  // 2) 남은 '_value'도 정규화
+  if (t.endsWith("_value")) t = t.slice(0, -"_value".length);             // mix
+  return t; // 'mix' / 'fry' / 'boil' / 'simmer' / 'slice' / 'put' ...
 }
 
 /** 동작 의미 규칙 평가 */
 function evaluateRule(action, blockChainRoot) {
   function collectFeatures(b, bag = new Set()) {
     if (!b) return bag;
+
     if (b.type === "ingredient_block") {
       const feats = getFeaturesFromAnyING(b) || [];
       feats.forEach((f) => bag.add(f));
       return bag;
     }
-    if (b.type === "combine_block") {
+
+    if (b.type === "combine_block" || b.type === "action_combine_block") {
       let i = 0;
       while (b.getInput("ITEM" + i)) {
-        const child = b.getInputTargetBlock("ITEM" + i);
-        collectFeatures(child, bag);
+        collectFeatures(b.getInputTargetBlock("ITEM" + i), bag);
         i++;
       }
       return bag;
     }
+
     const child = b.getInputTargetBlock?.("ITEM");
     if (child) return collectFeatures(child, bag);
     return bag;
