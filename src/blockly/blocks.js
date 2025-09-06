@@ -155,24 +155,35 @@ INGREDIENT_NAMES.forEach((name) => {
  * ========================= */
 Blockly.Blocks["ingredient_block"] = {
   init() {
-    this.appendValueInput("NAME").appendField("재료").setCheck("ING_NAME");
-    this.appendDummyInput()
-      .appendField("양")
-      .appendField(new Blockly.FieldNumber(1, 1), "QUANTITY")
-      .appendField(
-        new Blockly.FieldDropdown([
-          ["개", "개"],
-          ["컵", "컵"],
-          ["리터", "리터"],
-          ["그램", "그램"],
-        ]),
-        "UNIT"
-      );
     this.setOutput(true, "ING");
     this.setStyle("ingredient_blocks");
-    this.setTooltip("재료를 구성합니다.");
-  },
+
+    // 수량: 정수만 허용(음수 불가). 소수 입력 시 자동 반올림/버림.
+    const qty = new Blockly.FieldNumber(1, 0, 999999, 1);
+    qty.setValidator((txt) => {
+      const n = Math.floor(Number(txt));
+      return isFinite(n) && n >= 0 ? String(n) : "0";
+    });
+
+    // 단위: 기존 + 확장
+    const UNIT_OPTIONS = [
+      ["개","개"], ["컵","컵"], ["리터","리터"], ["그램","그램"],  // 기존
+      ["ml","ml"], ["kg","kg"], ["큰술","큰술"], ["작은술","작은술"],
+      ["L","L"], ["g","g"] // 표기 선호가 다를 수 있어 보강
+    ];
+
+    this.appendDummyInput("QTY")
+      .appendField("재료")
+      .appendField(qty, "QUANTITY")
+      .appendField(new Blockly.FieldDropdown(UNIT_OPTIONS), "UNIT");
+
+    // 이름 슬롯(여긴 그대로 — ING_NAME 붙는 자리)
+    this.appendValueInput("NAME").setCheck("ING_NAME");
+
+    this.setTooltip("재료 + 수량/단위를 지정합니다.");
+  }
 };
+
 
 /** =========================
  * 동작 (Statement & Value)
@@ -264,6 +275,26 @@ function defineActionNoTime(key) {
   };
 }
 ACTIONS_WITHOUT_TIME.forEach(defineActionNoTime);
+
+["mix","fry","boil","simmer","slice","put","grind"].forEach((k) => {
+  const stmt = Blockly.Blocks[`${k}_block`];
+  if (stmt) {
+    const old = stmt.init;
+    stmt.init = function() { old.call(this); this.setStyle("action_main_blocks"); };
+  }
+  const val = Blockly.Blocks[`${k}_value_block`];
+  if (val) {
+    const old = val.init;
+    val.init = function() { old.call(this); this.setStyle("action_value_blocks"); };
+  }
+});
+
+// 준비된 재료(동작 합치기)는 값 계열 색으로
+const ac = Blockly.Blocks["action_combine_block"];
+if (ac) {
+  const old = ac.init;
+  ac.init = function(){ old.call(this); this.setStyle("action_value_blocks"); };
+}
 
 /* ───────────────────────────────
  * 공통 헬퍼: 초경량 확인 모달 (Promise<boolean>)
@@ -502,8 +533,8 @@ __defineDynamicCombineBlock("combine_block", {
 __defineDynamicCombineBlock("action_combine_block", {
   outputType: ["ING", "ACTION"],
   inputCheck: null,
-  firstLabel: "동작 합치기",
-  nextLabel: "동작 추가",
+  firstLabel: "손질된 재료들",
+  nextLabel: "재료 추가",
   tooltip: "여러 동작을 합칩니다.(연결 시 입력 칸을 추가할지 물어봅니다)",
   leaveOneEmptyTail: true,
   // acceptOnlyTypes: 없음
