@@ -78,17 +78,15 @@ function countINGChildren(block) {
   return 0;
 }
 
-/** 동작 타입 추출 */
+/** 동작 타입 추출 (조리 + 조리값 둘 다 커버) */
 function getActionTypeFromBlockType(type) {
   const suffixes = ["_block", "_value_block"];
   for (const s of suffixes) if (type.endsWith(s)) return type.slice(0, -s.length);
   return null;
 }
 
-/** 규칙 평가 */
+/** 규칙 평가 (조리 & 조리값 동일 적용) */
 function evaluateRule(action, blockChainRoot) {
-  // 재료 feature 모음(합치기면 첫 재료의 feature만 보지 않도록, 합치기 전체를 수집)
-  // 간단화를 위해: 하나라도 해당 feature가 있으면 포함으로 본다.
   function collectFeatures(b, bag = new Set()) {
     if (!b) return bag;
     if (b.type === "ingredient_block") {
@@ -132,7 +130,6 @@ function evaluateRule(action, blockChainRoot) {
       if (!has("oil")) return { ok: false, error: "볶기는 기름(oil)이 필요해요. 식용유/버터 등을 추가하세요." };
       if (!(has("solid") || has("powder"))) return { ok: false, error: "볶기는 고체 또는 가루 재료가 필요해요." };
       if (has("liquid")) return { ok: false, error: "볶기에는 보통 액체는 넣지 않아요." };
-      // 재료가 2개 이상이면 더 자연스럽지만 필수는 아님
       return { ok: true };
 
     case "boil": // 끓이기: liquid 필수
@@ -156,12 +153,11 @@ export function installSemantics(workspace) {
   // undo가 스스로 다시 이벤트를 발생시켜 재귀되는 걸 막는 플래그
   let _squelch = false;
 
-  // ❗ 무효 결합은 즉시 이전 상태로 되돌리기
+  // ❗ 무효 결합은 즉시 이전 상태로 되돌리기(눈에 안 가려지게 안전)
   const revertInvalid = () => {
     if (_squelch) return;
     _squelch = true;
     try { workspace.undo(false); } catch {}
-    // 다음 틱에 해제하여 재진입 방지
     setTimeout(() => { _squelch = false; }, 0);
   };
 
@@ -177,10 +173,29 @@ export function installSemantics(workspace) {
     const input = parent.getInput(inputName);
     if (!input) return;
 
+    // 현재 연결된 자식
+    const child = input.connection && input.connection.targetBlock();
+    if (!child) return;
+
+    // ── Z) 동작 합치기 "출력"을 재료 관련 입력(ING/ING_NAME)에 꽂는 시도 → 금지 + undo ──
+    //  - 요구사항 #3: "재료 카테고리 외엔 전부 연결"을 만족시키면서
+    //    재료 쪽(TYPE: ING/ING_NAME)으로의 연결은 막는다.
+    if (child.type === "action_combine_block") {
+      const checks =
+        input.connection?.getCheck?.() ||
+        input.getCheck?.() ||
+        []; // 일부 버전 호환
+      const wantsING =
+        Array.isArray(checks) && (checks.includes("ING") || checks.includes("ING_NAME"));
+      if (wantsING) {
+        revertInvalid();
+        showToast("‘동작 합치기’(준비된 재료)는 재료 입력에는 연결할 수 없어요.", "error");
+        return;
+      }
+    }
+
     // ── A) 재료 합치기: ingredient_block만 허용 ─────────────────────────
     if (parent.type === "combine_block" && /^ITEM\d+$/.test(inputName)) {
-      const child = input.connection && input.connection.targetBlock();
-      if (!child) return;
       if (child.type !== "ingredient_block") {
         revertInvalid(); // ⬅️ disconnect/bump 대신 되돌리기
         showToast("재료 합치기에는 ‘재료’ 계량블록만 연결할 수 있어요.", "error");
@@ -190,9 +205,6 @@ export function installSemantics(workspace) {
 
     // ── B) 동작 합치기: ACTION 타입(동작값 블럭)만 허용 ───────────────────
     if (parent.type === "action_combine_block" && /^ITEM\d+$/.test(inputName)) {
-      const child = input.connection && input.connection.targetBlock();
-      if (!child) return;
-
       const checks = child.outputConnection?.getCheck?.() || [];
       const isActionLike = Array.isArray(checks) && checks.includes("ACTION");
       if (!isActionLike) {
@@ -202,26 +214,23 @@ export function installSemantics(workspace) {
       return; // 더 진행하지 않음
     }
 
-    // ── C) 기존 조리 동작 룰(ITEM 입력에만 적용) ────────────────────────
-    if (inputName !== "ITEM") return;
+    // ── C) 조리/조리값 공통 규칙(각 블록의 값 입력 'ITEM'에 동일 적용) ──
+    if (inputName !== "ITEM") return; // 다른 입력은 무시(성능상)
 
     const actionType = getActionTypeFromBlockType(parent.type);
     if (!actionType) return; // 재료/흐름/합치기 등은 무시
 
-    const child = input.connection && input.connection.targetBlock();
-    if (!child) return;
-
-    // ING_NAME 직결 금지
+    // 1) 재료이름(ING_NAME)을 바로 꽂으려는 시도 → 금지 + undo
     if (isRawIngredientNameBlock(child)) {
-      revertInvalid(); // ⬅️ 되돌리기
+      revertInvalid();
       showToast("재료 이름은 먼저 ‘재료’ 계량블록에 넣은 뒤 사용 가능합니다.", "error");
       return;
     }
 
-    // 동작별 의미 검증
+    // 2) 동작별 의미 검증 (조리 + 조리값 동일 적용)
     const verdict = evaluateRule(actionType, child);
     if (!verdict.ok) {
-      revertInvalid(); // ⬅️ 되돌리기
+      revertInvalid();
       showToast(verdict.error || "이 조합은 사용할 수 없어요.", "error");
     } else if (verdict.warn) {
       showToast(verdict.warn, "warn");
@@ -230,6 +239,7 @@ export function installSemantics(workspace) {
 
   workspace.addChangeListener(onMove);
 }
+
 
 
 
