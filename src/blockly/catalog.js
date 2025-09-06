@@ -1,4 +1,4 @@
-export const CATEGORY_ORDER = ["재료", "조리", "조리값", "흐름"];
+export const CATEGORY_ORDER = ["재료", "메인 요리동작", "재료 준비동작", "동작제어"];
 
 // 재료 이름 (가나다)
 const ING_NAMES = [
