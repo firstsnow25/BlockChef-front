@@ -511,6 +511,30 @@ __defineDynamicCombineBlock("action_combine_block", {
   // confirmOnDropAllFull: 없음(기존 로직)
 });
 
+// ─────────────────────────────────────────────
+// ⬇⬇⬇ 여기부터 “스타일 오버라이드” 패치 (파일 맨 끝에 위치)
+// ─────────────────────────────────────────────
+(() => {
+  ["mix","fry","boil","simmer","slice","put","grind"].forEach((k) => {
+    const stmt = Blockly.Blocks[`${k}_block`];
+    if (stmt && stmt.init) {
+      const old = stmt.init;
+      stmt.init = function () { old.call(this); this.setStyle("action_main_blocks"); };
+    }
+    const val = Blockly.Blocks[`${k}_value_block`];
+    if (val && val.init) {
+      const old = val.init;
+      val.init = function () { old.call(this); this.setStyle("action_value_blocks"); };
+    }
+  });
+
+  // 준비된 재료(동작 합치기)는 '값' 계열 색상으로
+  const ac = Blockly.Blocks["action_combine_block"];
+  if (ac && ac.init) {
+    const old = ac.init;
+    ac.init = function () { old.call(this); this.setStyle("action_value_blocks"); };
+  }
+})();
 
 /**
  * NOTE
